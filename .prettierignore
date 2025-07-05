@@ -1,0 +1,12 @@
+node_modules/
+dist/
+build/
+.next/
+coverage/
+*.min.js
+data/
+uploads/
+site.zip
+pnpm-lock.yaml
+*.db
+*.bak

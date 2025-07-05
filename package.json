@@ -7,13 +7,16 @@
   },
   "type": "module",
   "scripts": {
-    "dev": "node ./bin/cli.js --dry-run"
+    "dev": "node ./bin/cli.js --dry-run",
+    "format": "prettier --write ."
   },
   "dependencies": {
-    "execa": "^7.1.1",
     "chalk": "^5.3.0",
+    "commander": "^10.0.0",
     "cosmiconfig": "^8.3.6",
-    "commander": "^10.0.0"
+    "dotenv": "^17.0.1",
+    "execa": "^7.1.1",
+    "prettier": "^3.6.2"
   },
   "keywords": [
     "git",
