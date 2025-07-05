@@ -5,15 +5,7 @@
 ## Установка
 
 ```bash
-# Локально в проект
-pnpm add -D autocommit
-
-# Глобально
-pnpm install -g autocommit
-
-# Одноразово через npx / pnpm dlx
-npx autocommit
-pnpm dlx autocommit
+pnpm/npm/yarn link
 ```
 
 ## Быстрый старт
