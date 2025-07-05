@@ -1,0 +1,27 @@
+{
+  "name": "autocommit",
+  "version": "0.1.0",
+  "description": "CLI tool for smart auto-generated git commit messages",
+  "bin": {
+    "autocommit": "./bin/cli.js"
+  },
+  "type": "module",
+  "scripts": {
+    "dev": "node ./bin/cli.js --dry-run"
+  },
+  "dependencies": {
+    "execa": "^7.1.1",
+    "chalk": "^5.3.0",
+    "cosmiconfig": "^8.3.6",
+    "commander": "^10.0.0"
+  },
+  "keywords": [
+    "git",
+    "commit",
+    "autocommit",
+    "cli"
+  ],
+  "author": "",
+  "license": "MIT",
+  "packageManager": "pnpm@10.12.4"
+}
