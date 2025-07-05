@@ -41,13 +41,16 @@ export async function run(opts) {
   }
   summary = summary.slice(0, cfg.maxSummaryLength);
 
-  const header = `${cfg.prefix} ${opts.short ? '' : summary}`.trim();
-  const message = opts.short
-    ? header
-    : `${header}
+  const fileNames = changes.map(([_, file]) => file);
+  const shortSummary = `${fileNames.slice(0, 3).join(', ')}${
+    fileNames.length > 3 ? ` +${fileNames.length - 3} more` : ''
+  }`;
 
-Changes:
-${diffStat}`;
+  const header = opts.short
+    ? `${cfg.prefix} ${shortSummary}`
+    : `${cfg.prefix} ${summary}`;
+
+  const message = opts.short ? header : `${header}\n\nChanges:\n${diffStat}`;
 
   console.log(chalk.green('Generated commit message:'));
   console.log(message);
