@@ -80,28 +80,7 @@ def get_git_diff() -> Optional[str]:
     
     return diff
 
-def parse_ai_response(response: str) -> Optional[Tuple[str, str, str]]:
-    """Парсит ответ ИИ и извлекает тип релиза и сообщения коммитов."""
-    parts = response.strip().split('---')
-    if len(parts) != 3:
-        print(f"Ошибка: Неверный формат ответа от ИИ. Ожидалось 3 части, получено {len(parts)}.")
-        print(f"Ответ: {response}")
-        return None
-
-    release_type = parts[0].strip()
-    ru_commit = parts[1].strip()
-    en_commit = parts[2].strip()
-
-    if release_type.lower() not in ["patch", "minor", "major"]:
-        print(f"Ошибка: Неверный тип релиза '{release_type}'.")
-        return None
-    if not ru_commit or not en_commit:
-        print("Ошибка: Одно из сообщений коммита пустое.")
-        return None
-
-    return release_type, ru_commit, en_commit
-
-def split_commit_message(full_message: str) -> Tuple[str, Optional[str]]:
+def parse_ai_response(full_message: str) -> Tuple[str, Optional[str]]:
     """Разделяет полное сообщение коммита на заголовок и описание."""
     lines = full_message.strip().split('\n', 1)
     commit_msg = lines[0].strip()
@@ -158,7 +137,7 @@ def get_smart_diff(diff: str, context_length: Optional[int]) -> str:
     
     return diff
 
-def generate_commit_message(diff: str, model_info: Optional[dict]) -> Optional[Tuple[str, str, str]]:
+def generate_commit_message(diff: str, model_info: Optional[dict]) -> Optional[Tuple[str, Optional[str]]]:
     """Генерирует сообщение коммита через OpenRouter API"""
     api_key = os.getenv("OPENROUTER_API_KEY")
     api_url = os.getenv("OPENROUTER_API_URL", "https://openrouter.ai/api/v1/chat/completions")
@@ -189,48 +168,27 @@ def generate_commit_message(diff: str, model_info: Optional[dict]) -> Optional[T
         "X-Title": "Git Auto Commit"
     }
     
-    system_prompt = """Твоя задача - генерировать сообщения для коммитов на основе предоставленного diff.
+    system_prompt = """Your task is to generate a commit message based on the provided diff, following the Conventional Commits specification.
 
-Выходной формат должен быть СТРОГО следующим:
-[ТИП_РЕЛИЗА]
----
-[СООБЩЕНИЕ_НА_RU]
----
-[СООБЩЕНИЕ_НА_EN]
-
-### ПРАВИЛА:
-
-1.  **ТИП_РЕЛИЗА**:
-    - Укажи `patch`, `minor` или `major`.
-    - `major`: если есть обратно несовместимые изменения (BREAKING CHANGE).
-    - `minor`: если добавлена новая функциональность (`feat`).
-    - `patch`: для всего остального (`fix`, `perf`, `docs` и т.д.).
-
-2.  **СООБЩЕНИЕ_НА_RU / СООБЩЕНИЕ_НА_EN**:
-    - Это полное сообщение коммита, включая заголовок, тело и футер, отформатированное по правилам Conventional Commits.
-    - Генерируй идентичное по смыслу сообщение на двух языках: русском и английском.
-
-3.  **Формат Conventional Commits**:
-    - `тип(область): заголовок`
-    - (пустая строка)
-    - `тело коммита (опционально)`
-    - (пустая строка)
-    - `BREAKING CHANGE: описание (опционально)`
-
-4.  **Типы коммитов**:
-    - `feat`: Новая функциональность.
-    - `fix`: Исправление ошибки.
-    - `docs`: Изменения в документации.
-    - `style`: Стилистические правки (форматирование и т.д.).
-    - `refactor`: Рефакторинг кода без изменения поведения.
-    - `perf`: Улучшение производительности.
-    - `test`: Добавление или исправление тестов.
-    - `build`: Изменения в системе сборки или зависимостях.
-    - `ci`: Изменения в конфигурации CI/CD.
-    - `chore`: Прочие изменения, не затрагивающие код.
-    - `revert`: Откат предыдущего коммита.
-
-Отвечай ТОЛЬКО в указанном формате, без лишних слов."""
+RULES:
+1. The output must be ONLY the commit message text, without any extra words or explanations.
+2. The message must be in English.
+3. The format is: `type(scope): subject`
+    - Followed by an optional longer body.
+    - Followed by an optional `BREAKING CHANGE:` footer.
+4. Use the following types:
+    - `feat`: A new feature.
+    - `fix`: A bug fix.
+    - `docs`: Documentation only changes.
+    - `style`: Code style changes (formatting, etc).
+    - `refactor`: A code change that neither fixes a bug nor adds a feature.
+    - `perf`: A code change that improves performance.
+    - `test`: Adding missing tests or correcting existing tests.
+    - `build`: Changes that affect the build system or external dependencies.
+    - `ci`: Changes to CI configuration files and scripts.
+    - `chore`: Other changes that don't modify src or test files.
+    - `revert`: Reverts a previous commit.
+5. The body, if present, should have a header, a list of changes starting with `-`, and an optional footer."""
 
     payload = {
         "model": model,
@@ -241,10 +199,10 @@ def generate_commit_message(diff: str, model_info: Optional[dict]) -> Optional[T
             },
             {
                 "role": "user",
-                "content": f"Создай сообщение коммита для этих изменений:\n{smart_diff}"
+                "content": f"Create a commit message for these changes:\n{smart_diff}"
             }
         ],
-        "max_tokens": 400, 
+        "max_tokens": 250, 
         "temperature": 0.4
     }
     
@@ -332,39 +290,19 @@ def commit_changes(message: str, description: Optional[str] = None) -> bool:
         print(f"Ошибка при создании коммита (код: {code})")
         return False
 
-def show_confirmation(
-    release_type: str,
-    ru_msg: str, ru_desc: Optional[str],
-    en_msg: str, en_desc: Optional[str]
-) -> Optional[str]:
-    """Показывает подтверждение и спрашивает язык коммита."""
+def show_confirmation(commit_msg: str, description: Optional[str]) -> bool:
+    """Показывает подтверждение перед коммитом"""
     print("\n--- Предпросмотр коммита ---")
-    print(f"Рекомендуемый тип релиза: {release_type.upper()}")
+    print(f"Сообщение: {commit_msg}")
+    if description:
+        print(f"Описание:\n{description}")
+    print("-----------------------------")
     
-    print("\n--- РУССКАЯ ВЕРСИЯ ---")
-    print(f"Сообщение: {ru_msg}")
-    if ru_desc:
-        print(f"Описание:\n{ru_desc}")
-
-    print("\n--- АНГЛИЙСКАЯ ВЕРСИЯ ---")
-    print(f"Message: {en_msg}")
-    if en_desc:
-        print(f"Description:\n{en_desc}")
-    
-    print("-----------------------------\n")
-
     if len(sys.argv) > 1 and sys.argv[1] in ["-y", "--yes"]:
-        print("Выбран английский язык (по умолчанию для -y).")
-        return "en"
-
-    choice = input("Сделать коммит? [Y/n/ru/en]: ").lower()
+        return True
     
-    if choice in ( "", "y", "yes", "en"):
-        return "en"
-    elif choice == "ru":
-        return "ru"
-    else:
-        return None
+    confirm = input("Сделать коммит? [Y/n]: ").lower()
+    return confirm in ( "", "y", "yes", "да")
 
 def test_api_key():
     api_key = os.getenv("OPENROUTER_API_KEY")
@@ -435,26 +373,16 @@ def main():
         print("Попробуйте: python3 main.py --test-api")
         sys.exit(1)
     
-    release_type, ru_full, en_full = result
+    commit_msg, description = result
 
-    ru_msg, ru_desc = split_commit_message(ru_full)
-    en_msg, en_desc = split_commit_message(en_full)
-
-    chosen_lang = show_confirmation(release_type, ru_msg, ru_desc, en_msg, en_desc)
-
-    if chosen_lang == "ru":
-        print(f"\nВыбран русский язык. Рекомендуемый релиз: {release_type.upper()}")
-        success = commit_changes(ru_msg, ru_desc)
-    elif chosen_lang == "en":
-        print(f"\nВыбран английский язык. Рекомендуемый релиз: {release_type.upper()}")
-        success = commit_changes(en_msg, en_desc)
+    if show_confirmation(commit_msg, description):
+        success = commit_changes(commit_msg, description)
+        if success:
+            print("Готово!")
+        else:
+            sys.exit(1)
     else:
         print("Коммит отменен.")
-        sys.exit(1)
-
-    if success:
-        print("Готово!")
-    else:
         sys.exit(1)
 
 if __name__ == "__main__":
