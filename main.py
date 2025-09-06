@@ -38,6 +38,28 @@ def run_command(cmd: str, show_output: bool = False) -> tuple[str, int]:
     except Exception as e:
         return str(e), 1
 
+def get_model_info(model_name: str) -> Optional[dict]:
+    """Получает информацию о модели с OpenRouter API"""
+    api_url = "https://openrouter.ai/api/v1/models"
+    print("ℹ️  Получаю информацию о модели...")
+    try:
+        response = requests.get(api_url, timeout=15)
+        if response.status_code != 200:
+            print(f"⚠️  Не удалось получить список моделей (статус: {response.status_code})")
+            return None
+        
+        models_data = response.json().get("data", [])
+        for model in models_data:
+            if model.get("id") == model_name:
+                print(f"✅ Информация о модели {model_name} получена.")
+                return model
+        
+        print(f"⚠️  Модель '{model_name}' не найдена.")
+        return None
+    except requests.exceptions.RequestException as e:
+        print(f"❌ Ошибка при запросе информации о модели: {e}")
+        return None
+
 def get_git_diff() -> Optional[str]:
     """Получает git diff --cached для staged файлов"""
     # Проверяем есть ли staged файлы
@@ -87,16 +109,32 @@ def parse_ai_response(response: str) -> Tuple[str, Optional[str]]:
     
     return commit_msg, description if description else None
 
-def get_smart_diff(diff: str) -> str:
-    """Получает умный сжатый diff для больших изменений"""
+def get_smart_diff(diff: str, context_length: Optional[int]) -> str:
+    """Получает умный сжатый diff для больших изменений на основе контекста модели."""
     lines = diff.split('\n')
     diff_lines = len(lines)
+    diff_chars = len(diff)
     
-    print(f"📊 Размер diff: {diff_lines} строк, {len(diff)} символов")
+    print(f"📊 Размер diff: {diff_lines} строк, {diff_chars} символов")
     
-    # Если diff больше 1000 строк, используем сжатый формат
-    if diff_lines > 1000:
-        print("📋 Diff слишком большой, получаю краткую сводку...")
+    # Значения по умолчанию, если информация о модели недоступна
+    line_limit = 1000
+    char_limit = 10000
+
+    if context_length:
+        # Рассчитываем лимиты на основе длины контекста модели.
+        # Используем 50% контекста для diff, чтобы оставить место для промпта и ответа.
+        # Эвристика: 1 токен ~ 4 символа.
+        char_limit = int(context_length * 0.5 * 4)
+        # Эвристика: 1 строка ~ 80 символов.
+        line_limit = char_limit // 80
+        print(f"ℹ️ Динамические лимиты (на основе контекста {context_length}): {line_limit} строк, {char_limit} символов")
+    else:
+        print(f"⚠️ Используются лимиты по умолчанию: {line_limit} строк, {char_limit} символов")
+
+    # Если diff больше лимита строк, используем сжатый формат
+    if diff_lines > line_limit:
+        print(f"📋 Diff слишком большой ({diff_lines} > {line_limit} строк), получаю краткую сводку...")
         
         # Получаем статистику файлов
         stats_output, _ = run_command("git diff --cached --stat")
@@ -117,14 +155,14 @@ def get_smart_diff(diff: str) -> str:
 
 (Показано первые 50 и последние 20 строк из {diff_lines} всего)"""
     
-    # Если diff больше 000 символов, обрезаем но не так агрессивно
-    elif len(diff) > 10000:
-        print("⚠️  Diff большой, сокращаю...")
-        return diff[:3500] + "\n...(показаны первые 3500 символов)"
+    # Если diff больше лимита символов, обрезаем
+    elif diff_chars > char_limit:
+        print(f"⚠️  Diff большой ({diff_chars} > {char_limit} символов), сокращаю...")
+        return diff[:char_limit] + f"\n...(показаны первые {char_limit} символов)"
     
     return diff
 
-def generate_commit_message(diff: str) -> Optional[Tuple[str, Optional[str]]]:
+def generate_commit_message(diff: str, model_info: Optional[dict]) -> Optional[Tuple[str, Optional[str]]]:
     """Генерирует сообщение коммита через OpenRouter API"""
     api_key = os.getenv("OPENROUTER_API_KEY")
     api_url = os.getenv("OPENROUTER_API_URL", "https://openrouter.ai/api/v1/chat/completions")
@@ -139,8 +177,15 @@ def generate_commit_message(diff: str) -> Optional[Tuple[str, Optional[str]]]:
     print(f"🌐 URL: {api_url}")
     print(f"🤖 Модель: {model}")
     
+    context_length = None
+    if model_info and "context_length" in model_info:
+        context_length = int(model_info["context_length"])
+        print(f"🧠 Длина контекста модели: {context_length} токенов")
+    else:
+        print("⚠️  Не удалось определить длину контекста, используются значения по умолчанию.")
+
     # Получаем умный diff
-    smart_diff = get_smart_diff(diff)
+    smart_diff = get_smart_diff(diff, context_length)
     
     headers = {
         "Authorization": f"Bearer {api_key}",
@@ -161,7 +206,7 @@ def generate_commit_message(diff: str) -> Optional[Tuple[str, Optional[str]]]:
 - Остальные строки: подробное описание (если нужно)
 
 Используй типы: feat, fix, docs, style, refactor, test, chore.
-Отвечай ТОЛЬКО текстом коммита, без лишних слов."""
+Отвечай ТОЛЬКО текстом коммита, без лишних слов.""",
             },
             {
                 "role": "user",
@@ -190,7 +235,7 @@ def generate_commit_message(diff: str) -> Optional[Tuple[str, Optional[str]]]:
             try:
                 error_data = response.json()
                 print(f"Детали ошибки: {error_data}")
-            except:
+            except json.JSONDecodeError:
                 print(f"Тело ответа: {response.text}")
             return None
         
@@ -247,7 +292,7 @@ def commit_changes(message: str, description: Optional[str] = None) -> bool:
         full_message = f"{message}\n\n{description}"
     
     # Экранируем кавычки в сообщении
-    escaped_message = full_message.replace('"', '\\"').replace('`', '\\`')
+    escaped_message = full_message.replace('"', '\"').replace('`', '\`')
     
     print("🔄 Создаю коммит...")
     print("=" * 50)
@@ -258,7 +303,7 @@ def commit_changes(message: str, description: Optional[str] = None) -> bool:
     print("=" * 50)
     
     if code == 0:
-        print(f"✅ Коммит успешно создан!")
+        print("✅ Коммит успешно создан!")
         return True
     else:
         print(f"❌ Ошибка при создании коммита (код: {code})")
@@ -279,7 +324,7 @@ def show_confirmation(commit_msg: str, description: Optional[str]) -> bool:
         return True
     
     confirm = input("Сделать коммит? [Y/n]: ").lower()
-    return confirm in ("", "y", "yes", "да")
+    return confirm in ( "", "y", "yes", "да")
 
 def test_api_key():
     """Тестирует API ключ"""
@@ -340,6 +385,10 @@ def main():
     if code != 0:
         print("❌ Не найден git репозиторий")
         sys.exit(1)
+
+    # Получаем информацию о модели
+    model_name = os.getenv("OPENROUTER_MODEL", "anthropic/claude-3.5-sonnet")
+    model_info = get_model_info(model_name)
     
     # Получаем изменения только для staged файлов
     diff = get_git_diff()
@@ -347,7 +396,7 @@ def main():
         sys.exit(1)
     
     # Генерируем сообщение коммита
-    result = generate_commit_message(diff)
+    result = generate_commit_message(diff, model_info)
     if not result:
         print("❌ Не удалось сгенерировать сообщение коммита")
         print("💡 Попробуй: python3 gac.py --test-api")
