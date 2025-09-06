@@ -11,6 +11,7 @@ import json
 from typing import Optional, Tuple
 from dotenv import load_dotenv
 
+# Загружаем переменные окружения из .env
 load_dotenv()
 
 def run_command(cmd: str, show_output: bool = False) -> tuple[str, int]:
@@ -38,22 +39,24 @@ def run_command(cmd: str, show_output: bool = False) -> tuple[str, int]:
         return str(e), 1
 
 def get_git_diff() -> Optional[str]:
-    """Получает git diff --cached"""
-    # Сначала добавляем все файлы
-    print("📁 Добавляю файлы...")
-    _, code = run_command("git add .")
+    """Получает git diff --cached для staged файлов"""
+    # Проверяем есть ли staged файлы
+    staged_files, code = run_command("git diff --cached --name-only")
     if code != 0:
-        print("❌ Ошибка при добавлении файлов")
+        print("❌ Ошибка при проверке staged файлов")
         return None
     
-    # Получаем diff
+    if not staged_files.strip():
+        print("ℹ️  Нет staged файлов для коммита")
+        print("💡 Сначала добавь файлы: git add <файлы> или git add .")
+        return None
+    
+    print(f"📁 Staged файлы: {staged_files.replace(chr(10), ', ')}")
+    
+    # Получаем diff только для staged файлов
     diff, code = run_command("git diff --cached")
     if code != 0:
         print("❌ Ошибка при получении diff")
-        return None
-    
-    if not diff.strip():
-        print("ℹ️  Нет изменений для коммита")
         return None
     
     return diff
@@ -84,20 +87,70 @@ def parse_ai_response(response: str) -> Tuple[str, Optional[str]]:
     
     return commit_msg, description if description else None
 
+def get_smart_diff(diff: str) -> str:
+    """Получает умный сжатый diff для больших изменений"""
+    lines = diff.split('\n')
+    diff_lines = len(lines)
+    
+    print(f"📊 Размер diff: {diff_lines} строк, {len(diff)} символов")
+    
+    # Если diff больше 1000 строк, используем сжатый формат
+    if diff_lines > 1000:
+        print("📋 Diff слишком большой, получаю краткую сводку...")
+        
+        # Получаем статистику файлов
+        stats_output, _ = run_command("git diff --cached --stat")
+        
+        # Получаем список файлов с типами изменений
+        name_status_output, _ = run_command("git diff --cached --name-status")
+        
+        return f"""=== СТАТИСТИКА ИЗМЕНЕНИЙ ===
+{stats_output}
+
+=== ИЗМЕНЕННЫЕ ФАЙЛЫ ===
+{name_status_output}
+
+=== ПРИМЕРЫ ИЗМЕНЕНИЙ ===
+{chr(10).join(lines[:50])}
+...
+{chr(10).join(lines[-20:])}
+
+(Показано первые 50 и последние 20 строк из {diff_lines} всего)"""
+    
+    # Если diff больше 000 символов, обрезаем но не так агрессивно
+    elif len(diff) > 10000:
+        print("⚠️  Diff большой, сокращаю...")
+        return diff[:3500] + "\n...(показаны первые 3500 символов)"
+    
+    return diff
+
 def generate_commit_message(diff: str) -> Optional[Tuple[str, Optional[str]]]:
     """Генерирует сообщение коммита через OpenRouter API"""
     api_key = os.getenv("OPENROUTER_API_KEY")
+    api_url = os.getenv("OPENROUTER_API_URL", "https://openrouter.ai/api/v1/chat/completions")
+    model = os.getenv("OPENROUTER_MODEL", "anthropic/claude-3.5-sonnet")
+    
     if not api_key:
-        print("❌ Не установлен OPENROUTER_API_KEY")
+        print("❌ Не установлен OPENROUTER_API_KEY в .env файле")
+        print("💡 Создай .env файл с OPENROUTER_API_KEY=твой_ключ")
         return None
+    
+    print(f"🔑 Используем API ключ: {api_key[:8]}...")
+    print(f"🌐 URL: {api_url}")
+    print(f"🤖 Модель: {model}")
+    
+    # Получаем умный diff
+    smart_diff = get_smart_diff(diff)
     
     headers = {
         "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://github.com/rozeraf/git-auto-commit",
+        "X-Title": "Git Auto Commit"
     }
     
     payload = {
-        "model": "meta-llama/llama-3.1-8b-instruct:free",
+        "model": model,
         "messages": [
             {
                 "role": "system",
@@ -112,34 +165,78 @@ def generate_commit_message(diff: str) -> Optional[Tuple[str, Optional[str]]]:
             },
             {
                 "role": "user",
-                "content": f"Создай сообщение коммита для этих изменений:\n{diff}"
+                "content": f"Создай сообщение коммита для этих изменений:\n{smart_diff}"
             }
-        ]
+        ],
+        "max_tokens": 150,  # Ограничиваем ответ
+        "temperature": 0.3  # Меньше креативности, больше точности
     }
     
     try:
         print("🤖 Генерирую сообщение коммита...")
+        print("🌐 Отправляю запрос к API...")
+        
         response = requests.post(
-            "https://openrouter.ai/api/v1/chat/completions",
+            api_url,
             headers=headers,
             json=payload,
-            timeout=30
+            timeout=30  # Уменьшаем timeout
         )
+        
+        print(f"📡 Статус ответа: {response.status_code}")
         
         if response.status_code != 200:
             print(f"❌ Ошибка API: {response.status_code}")
-            print(f"Ответ: {response.text}")
+            try:
+                error_data = response.json()
+                print(f"Детали ошибки: {error_data}")
+            except:
+                print(f"Тело ответа: {response.text}")
             return None
         
-        data = response.json()
+        # Проверяем что ответ не пустой
+        response_text = response.text.strip()
+        if not response_text:
+            print("❌ Пустой ответ от API")
+            return None
+            
+        print(f"📦 Получен ответ ({len(response_text)} символов)")
+        
+        try:
+            data = response.json()
+        except json.JSONDecodeError as e:
+            print(f"❌ Ошибка парсинга JSON: {e}")
+            print(f"Первые 200 символов ответа: {response_text[:200]}")
+            return None
+        
+        if "choices" not in data or len(data["choices"]) == 0:
+            print(f"❌ Неверный формат ответа: {data}")
+            return None
+        
+        if "message" not in data["choices"][0]:
+            print(f"❌ Отсутствует поле message: {data['choices'][0]}")
+            return None
+            
         ai_response = data["choices"][0]["message"]["content"].strip()
+        print(f"🤖 Ответ ИИ: {ai_response}")
         
         commit_msg, description = parse_ai_response(ai_response)
         
         return commit_msg, description
         
+    except requests.exceptions.Timeout:
+        print("❌ Таймаут запроса (30 сек). Попробуй еще раз.")
+        return None
+    except requests.exceptions.ConnectionError:
+        print("❌ Ошибка подключения к API. Проверь интернет.")
+        return None
+    except KeyboardInterrupt:
+        print("\n❌ Запрос отменен пользователем")
+        return None
     except Exception as e:
-        print(f"❌ Ошибка при обращении к API: {e}")
+        print(f"❌ Неожиданная ошибка: {type(e).__name__}: {e}")
+        import traceback
+        traceback.print_exc()
         return None
 
 def commit_changes(message: str, description: Optional[str] = None) -> bool:
