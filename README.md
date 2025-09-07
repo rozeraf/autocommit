@@ -38,19 +38,11 @@ A Python utility for automatically generating commit messages using AI. The scri
 
 ## Supported API Providers
 
-An OpenAI-compatible API provider is required. Both free and paid options are supported.
-See [this list of free LLM APIs](https://github.com/smol-ai/free-llm-apis) for alternatives.
-
-### Tested providers (all offer a free tier as of writing):
+### Tested providers:
 
 | Provider | Endpoint URL | Documentation |
 |---|---|---|
 | OpenRouter | `https://openrouter.ai/api/v1/` | [Docs](https://openrouter.ai/docs) |
-| Cerebras | `https://api.cerebras.ai/v1/` | [Docs](https://docs.cerebras.net/en/latest/wsc/inference/api.html) |
-| Groq | `https://api.groq.com/openai/v1` | [Docs](https://console.groq.com/docs/quickstart) |
-| Together AI | `https://api.together.xyz/v1/` | [Docs](https://docs.together.ai/docs/quickstart) |
-| GitHub Models | `https://models.github.ai/inference` | [Docs](https://docs.github.com/en/copilot/github-copilot-enterprise/copilot-chat-in-githubcom/using-github-copilot-chat-in-githubcom#accessing-other-models) |
-| Gemini (not yet supported) | `https://generativelanguage.googleapis.com/v1beta/openai/` | |
 
 You can configure the API endpoint and model by setting the following environment variables:
 ```env
