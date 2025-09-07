@@ -30,15 +30,33 @@ A Python utility for automatically generating commit messages using AI. The scri
     ```bash
     pip install -r requirements.txt
     ```
-3.  Configure environment variables. Create a `.env` file in the project root and add the following variables:
+3.  Configure environment variables. Create a `.env` file in the project root and add your API key. For example:
     ```env
-    # Required
+    # Get your free key from https://openrouter.ai/
     OPENROUTER_API_KEY="sk-or-v1-..."
-
-    # Optional
-    OPENROUTER_API_BASE="https://openrouter.ai/api/v1"
-    OPENROUTER_MODEL="meta-llama/llama-3.1-8b-instruct"
     ```
+
+## Supported API Providers
+
+An OpenAI-compatible API provider is required. Both free and paid options are supported.
+See [this list of free LLM APIs](https://github.com/smol-ai/free-llm-apis) for alternatives.
+
+### Tested providers (all offer a free tier as of writing):
+
+| Provider | Endpoint URL | Documentation |
+|---|---|---|
+| OpenRouter | `https://openrouter.ai/api/v1/` | [Docs](https://openrouter.ai/docs) |
+| Cerebras | `https://api.cerebras.ai/v1/` | [Docs](https://docs.cerebras.net/en/latest/wsc/inference/api.html) |
+| Groq | `https://api.groq.com/openai/v1` | [Docs](https://console.groq.com/docs/quickstart) |
+| Together AI | `https://api.together.xyz/v1/` | [Docs](https://docs.together.ai/docs/quickstart) |
+| GitHub Models | `https://models.github.ai/inference` | [Docs](https://docs.github.com/en/copilot/github-copilot-enterprise/copilot-chat-in-githubcom/using-github-copilot-chat-in-githubcom#accessing-other-models) |
+| Gemini (not yet supported) | `https://generativelanguage.googleapis.com/v1beta/openai/` | |
+
+You can configure the API endpoint and model by setting the following environment variables:
+```env
+OPENROUTER_API_BASE="https://openrouter.ai/api/v1"
+OPENROUTER_MODEL="meta-llama/llama-3.1-8b-instruct"
+```
 
 ## Usage
 
