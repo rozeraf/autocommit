@@ -23,6 +23,12 @@
 5.  After confirmation, the commit is created automatically.
 
 
+## Requirements
+
+- Python 3 and Git must be installed.
+- It is recommended to use this tool on Linux for best performance and compatibility.
+
+
 ## Installation
 
 1.  **Clone the repository:**

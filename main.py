@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Git Auto Commit - автоматическое создание коммитов с помощью ИИ
+Git Auto Commit - automatic commit creation using AI
 """
 
 import subprocess
@@ -14,10 +14,10 @@ from dotenv import load_dotenv
 load_dotenv()
 
 def run_command(cmd: str, show_output: bool = False) -> tuple[str, int]:
-    """Выполняет команду и возвращает вывод и код возврата"""
+    """Executes a command and returns the output and return code"""
     try:
         if show_output:
-            # Показываем вывод в реальном времени для команд, которые могут иметь интерактивный вывод (например, git hooks)
+            # Show real-time output for commands that may have interactive output (e.g., git hooks)
             result = subprocess.run(
                 cmd, 
                 shell=True, 
@@ -38,50 +38,50 @@ def run_command(cmd: str, show_output: bool = False) -> tuple[str, int]:
         return str(e), 1
 
 def get_model_info(model_name: str) -> Optional[dict]:
-    """Получает информацию о модели с OpenRouter API"""
+    """Gets model information from the OpenRouter API"""
     api_url = "https://openrouter.ai/api/v1/models"
-    print("Получаю информацию о модели...")
+    print("Getting model information...")
     try:
         response = requests.get(api_url, timeout=15)
         if response.status_code != 200:
-            print(f"Не удалось получить список моделей (статус: {response.status_code})")
+            print(f"Failed to get model list (status: {response.status_code})")
             return None
         
         models_data = response.json().get("data", [])
         for model in models_data:
             if model.get("id") == model_name:
-                print(f"Информация о модели {model_name} получена.")
+                print(f"Model information for {model_name} received.")
                 return model
         
-        print(f"Модель '{model_name}' не найдена.")
+        print(f"Model '{model_name}' not found.")
         return None
     except requests.exceptions.RequestException as e:
-        print(f"Ошибка при запросе информации о модели: {e}")
+        print(f"Error requesting model information: {e}")
         return None
 
 def get_git_diff() -> Optional[str]:
-    """Получает git diff --cached для staged файлов"""
+    """Gets git diff --cached for staged files"""
     staged_files, code = run_command("git diff --cached --name-only")
     if code != 0:
-        print("Ошибка при проверке staged файлов")
+        print("Error checking staged files")
         return None
     
     if not staged_files.strip():
-        print("Нет staged файлов для коммита.")
-        print("Сначала добавьте файлы: git add <файлы>")
+        print("No staged files to commit.")
+        print("First, add files: git add <files>")
         return None
     
-    print(f"Staged файлы: {staged_files.replace(chr(10), ', ')}")
+    print(f"Staged files: {staged_files.replace(chr(10), ', ')}")
     
     diff, code = run_command("git diff --cached")
     if code != 0:
-        print("Ошибка при получении diff")
+        print("Error getting diff")
         return None
     
     return diff
 
 def parse_ai_response(full_message: str) -> Tuple[str, Optional[str]]:
-    """Разделяет полное сообщение коммита на заголовок и описание."""
+    """Splits the full commit message into a subject and description."""
     lines = full_message.strip().split('\n', 1)
     commit_msg = lines[0].strip()
     description = None
@@ -90,74 +90,74 @@ def parse_ai_response(full_message: str) -> Tuple[str, Optional[str]]:
     return commit_msg, description
 
 def get_smart_diff(diff: str, context_length: Optional[int]) -> str:
-    """Получает умный сжатый diff для больших изменений на основе контекста модели."""
+    """Gets a smart, compressed diff for large changes based on the model's context."""
     lines = diff.split('\n')
     diff_lines = len(lines)
     diff_chars = len(diff)
     
-    print(f"Размер diff: {diff_lines} строк, {diff_chars} символов")
+    print(f"Diff size: {diff_lines} lines, {diff_chars} characters")
     
-    # Значения по умолчанию, если информация о модели недоступна
+    # Default values if model information is unavailable
     line_limit = 1000
     char_limit = 10000
 
     if context_length:
-        # Рассчитываем лимиты на основе длины контекста модели.
-        # Используем 50% контекста для diff, чтобы оставить место для промпта и ответа.
-        # Эвристика: 1 токен ~ 4 символа.
+        # Calculating limits based on model context length.
+        # Using 50% of the context for the diff to leave space for the prompt and response.
+        # Heuristic: 1 token ~ 4 characters.
         char_limit = int(context_length * 0.5 * 4)
-        # Эвристика: 1 строка ~ 80 символов.
+        # Heuristic: 1 line ~ 80 characters.
         line_limit = char_limit // 80
-        print(f"Динамические лимиты (контекст {context_length}): {line_limit} строк, {char_limit} символов")
+        print(f"Dynamic limits (context {context_length}): {line_limit} lines, {char_limit} characters")
     else:
-        print(f"Используются лимиты по умолчанию: {line_limit} строк, {char_limit} символов")
+        print(f"Using default limits: {line_limit} lines, {char_limit} characters")
 
     if diff_lines > line_limit:
-        print(f"Diff слишком большой ({diff_lines} > {line_limit} строк), используется краткая сводка.")
+        print(f"Diff is too large ({diff_lines} > {line_limit} lines), using a brief summary.")
         
         stats_output, _ = run_command("git diff --cached --stat")
         name_status_output, _ = run_command("git diff --cached --name-status")
         
-        return f"""=== СТАТИСТИКА ИЗМЕНЕНИЙ ===
+        return f'''=== CHANGE STATISTICS ===
 {stats_output}
 
-=== ИЗМЕНЕННЫЕ ФАЙЛЫ ===
+=== MODIFIED FILES ===
 {name_status_output}
 
-=== ПРИМЕРЫ ИЗМЕНЕНИЙ ===
+=== CHANGE EXAMPLES ===
 {chr(10).join(lines[:50])}
 ...
 {chr(10).join(lines[-20:])}
 
-(Показано первые 50 и последние 20 строк из {diff_lines} всего)"""
+(Showing the first 50 and last 20 lines out of {diff_lines} total)'''
     
     elif diff_chars > char_limit:
-        print(f"Diff большой ({diff_chars} > {char_limit} символов), сокращается...")
-        return diff[:char_limit] + f"\n...(показаны первые {char_limit} символов)"
+        print(f"Diff is large ({diff_chars} > {char_limit} characters), shortening...")
+        return diff[:char_limit] + f"\n...(showing the first {char_limit} characters)"
     
     return diff
 
 def generate_commit_message(diff: str, model_info: Optional[dict]) -> Optional[Tuple[str, Optional[str]]]:
-    """Генерирует сообщение коммита через OpenRouter API"""
+    """Generates a commit message via the OpenRouter API"""
     api_key = os.getenv("OPENROUTER_API_KEY")
     api_url = os.getenv("OPENROUTER_API_URL", "https://openrouter.ai/api/v1/chat/completions")
     model = os.getenv("OPENROUTER_MODEL", "anthropic/claude-3.5-sonnet")
     
     if not api_key:
-        print("Ошибка: Не установлен OPENROUTER_API_KEY в .env файле.")
-        print("Создайте .env файл с OPENROUTER_API_KEY=ваш_ключ")
+        print("Error: OPENROUTER_API_KEY is not set in the .env file.")
+        print("Create a .env file with OPENROUTER_API_KEY=your_key")
         return None
     
-    print(f"Используется API ключ: {api_key[:8]}...")
+    print(f"Using API key: {api_key[:8]}...")
     print(f"URL: {api_url}")
-    print(f"Модель: {model}")
+    print(f"Model: {model}")
     
     context_length = None
     if model_info and "context_length" in model_info:
         context_length = int(model_info["context_length"])
-        print(f"Длина контекста модели: {context_length} токенов")
+        print(f"Model context length: {context_length} tokens")
     else:
-        print("Не удалось определить длину контекста, используются значения по умолчанию.")
+        print("Could not determine context length, using default values.")
 
     smart_diff = get_smart_diff(diff, context_length)
     
@@ -168,7 +168,7 @@ def generate_commit_message(diff: str, model_info: Optional[dict]) -> Optional[T
         "X-Title": "Git Auto Commit"
     }
     
-    system_prompt = """Your task is to generate a commit message based on the provided diff, following the Conventional Commits specification.
+    system_prompt = '''Your task is to generate a commit message based on the provided diff, following the Conventional Commits specification.
 
 RULES:
 1. The output must be ONLY the commit message text, without any extra words or explanations.
@@ -188,7 +188,7 @@ RULES:
     - `ci`: Changes to CI configuration files and scripts.
     - `chore`: Other changes that don't modify src or test files.
     - `revert`: Reverts a previous commit.
-5. The body, if present, should have a header, a list of changes starting with `-`, and an optional footer."""
+5. The body, if present, should have a header, a list of changes starting with `-`, and an optional footer.'''
 
     payload = {
         "model": model,
@@ -207,8 +207,8 @@ RULES:
     }
     
     try:
-        print("Генерация сообщения коммита...")
-        print("Отправка запроса к API...")
+        print("Generating commit message...")
+        print("Sending request to API...")
         
         response = requests.post(
             api_url,
@@ -217,92 +217,92 @@ RULES:
             timeout=45
         )
         
-        print(f"Статус ответа: {response.status_code}")
+        print(f"Response status: {response.status_code}")
         
         if response.status_code != 200:
-            print(f"Ошибка API: {response.status_code}")
+            print(f"API Error: {response.status_code}")
             try:
                 error_data = response.json()
-                print(f"Детали ошибки: {error_data}")
+                print(f"Error details: {error_data}")
             except json.JSONDecodeError:
-                print(f"Тело ответа: {response.text}")
+                print(f"Response body: {response.text}")
             return None
         
         response_text = response.text.strip()
         if not response_text:
-            print("Пустой ответ от API")
+            print("Empty response from API")
             return None
             
-        print(f"Получен ответ ({len(response_text)} символов)")
+        print(f"Received response ({len(response_text)} characters)")
         
         try:
             data = response.json()
         except json.JSONDecodeError as e:
-            print(f"Ошибка парсинга JSON: {e}")
-            print(f"Первые 200 символов ответа: {response_text[:200]}")
+            print(f"JSON parsing error: {e}")
+            print(f"First 200 characters of response: {response_text[:200]}")
             return None
         
         if "choices" not in data or len(data["choices"]) == 0:
-            print(f"Неверный формат ответа: {data}")
+            print(f"Invalid response format: {data}")
             return None
         
         if "message" not in data["choices"][0]:
-            print(f"Отсутствует поле message: {data['choices'][0]}")
+            print(f"Missing message field: {data['choices'][0]}")
             return None
             
         ai_response = data["choices"][0]["message"]["content"].strip()
-        print(f"Ответ ИИ:\n{ai_response}")
+        print(f"AI Response:\n{ai_response}")
         
         return parse_ai_response(ai_response)
         
     except requests.exceptions.Timeout:
-        print("Таймаут запроса (45 сек). Попробуйте еще раз.")
+        print("Request timeout (45s). Please try again.")
         return None
     except requests.exceptions.ConnectionError:
-        print("Ошибка подключения к API. Проверьте интернет.")
+        print("API connection error. Check your internet connection.")
         return None
     except KeyboardInterrupt:
-        print("\nЗапрос отменен пользователем")
+        print("\nRequest cancelled by user")
         return None
     except Exception as e:
-        print(f"Неожиданная ошибка: {type(e).__name__}: {e}")
+        print(f"Unexpected error: {type(e).__name__}: {e}")
         import traceback
         traceback.print_exc()
         return None
 
 def commit_changes(message: str, description: Optional[str] = None) -> bool:
-    """Создает коммит с указанным сообщением"""
+    """Creates a commit with the specified message"""
     full_message = message
     if description:
         full_message = f"{message}\n\n{description}"
     
-    escaped_message = full_message.replace('"', '\"').replace('`', '\`')
+    escaped_message = full_message.replace('"', '"').replace('`', '`')
     
-    print("\nСоздание коммита...")
+    print("\nCreating commit...")
     
-    # Используем show_output=True чтобы видеть вывод git hooks
+    # Use show_output=True to see git hooks output
     _, code = run_command(f'git commit -m "{escaped_message}"', show_output=True)
     
     if code == 0:
-        print("Коммит успешно создан!")
+        print("Commit created successfully!")
         return True
     else:
-        print(f"Ошибка при создании коммита (код: {code})")
+        print(f"Error creating commit (code: {code})")
         return False
 
 def show_confirmation(commit_msg: str, description: Optional[str]) -> bool:
-    """Показывает подтверждение перед коммитом"""
-    print("\n--- Предпросмотр коммита ---")
-    print(f"Сообщение: {commit_msg}")
+    """Shows confirmation before committing"""
+    print("\n--- Commit Preview ---")
+    print(f"Message: {commit_msg}")
     if description:
-        print(f"Описание:\n{description}")
+        print(f"Description:\n{description}")
     print("-----------------------------")
     
     if len(sys.argv) > 1 and sys.argv[1] in ["-y", "--yes"]:
         return True
     
-    confirm = input("Сделать коммит? [Y/n]: ").lower()
-    return confirm in ( "", "y", "yes", "да")
+    confirm = input("Create commit? [Y/n]: ").lower()
+    return confirm in ( "", "y", "yes")
 
 def test_api_key():
     api_key = os.getenv("OPENROUTER_API_KEY")
@@ -310,7 +310,7 @@ def test_api_key():
     model = os.getenv("OPENROUTER_MODEL", "anthropic/claude-3.5-sonnet")
     
     if not api_key:
-        print("Ошибка: Не установлен OPENROUTER_API_KEY в .env файле")
+        print("Error: OPENROUTER_API_KEY is not set in the .env file.")
         return False
     
     headers = {
@@ -325,9 +325,9 @@ def test_api_key():
     }
     
     try:
-        print("Тестирование API ключа...")
+        print("Testing API key...")
         print(f"URL: {api_url}")
-        print(f"Модель: {model}")
+        print(f"Model: {model}")
         
         response = requests.post(
             api_url,
@@ -336,16 +336,16 @@ def test_api_key():
             timeout=30
         )
         
-        print(f"Статус: {response.status_code}")
+        print(f"Status: {response.status_code}")
         if response.status_code == 200:
-            print("API ключ работает!")
+            print("API key is working!")
             return True
         else:
-            print(f"Проблема с API ключом: {response.text}")
+            print(f"Problem with API key: {response.text}")
             return False
             
     except Exception as e:
-        print(f"Ошибка тестирования: {e}")
+        print(f"Testing error: {e}")
         return False
 
 def main():
@@ -353,11 +353,11 @@ def main():
         test_api_key()
         return
     
-    print("Git Auto Commit: генерация коммита для staged файлов...")
+    print("Git Auto Commit: generating commit for staged files...")
     
     _, code = run_command("git rev-parse --git-dir")
     if code != 0:
-        print("Ошибка: не найден git репозиторий.")
+        print("Error: git repository not found.")
         sys.exit(1)
 
     model_name = os.getenv("OPENROUTER_MODEL", "anthropic/claude-3.5-sonnet")
@@ -369,8 +369,8 @@ def main():
     
     result = generate_commit_message(diff, model_info)
     if not result:
-        print("Не удалось сгенерировать сообщение коммита.")
-        print("Попробуйте: python3 main.py --test-api")
+        print("Failed to generate commit message.")
+        print("Try: python3 main.py --test-api")
         sys.exit(1)
     
     commit_msg, description = result
@@ -378,11 +378,11 @@ def main():
     if show_confirmation(commit_msg, description):
         success = commit_changes(commit_msg, description)
         if success:
-            print("Готово!")
+            print("Done!")
         else:
             sys.exit(1)
     else:
-        print("Коммит отменен.")
+        print("Commit cancelled.")
         sys.exit(1)
 
 if __name__ == "__main__":
