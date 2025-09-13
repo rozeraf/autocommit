@@ -6,8 +6,14 @@ import subprocess
 from typing import Optional
 
 
-def run_command(cmd: str, show_output: bool = False, timeout: int = 60) -> tuple[str, int]:
-    """Executes a command and returns the output and return code"""
+def run_command(cmd_parts: list[str], show_output: bool = False, timeout: int = 60) -> tuple[str, int]:
+    """Executes a command as list of arguments and returns the output and return code.
+    
+    Args:
+        cmd_parts: List of command and arguments (e.g., ['git', 'diff', '--cached'])
+        show_output: If True, shows output in real-time instead of capturing it
+        timeout: Timeout in seconds for the command
+    """
     error_occurred = False
     exit_code = 1
     
@@ -16,42 +22,42 @@ def run_command(cmd: str, show_output: bool = False, timeout: int = 60) -> tuple
             # Show real-time output for commands that may have interactive output (e.g., git hooks)
             # Don't capture output, let it go directly to terminal
             result = subprocess.run(
-                cmd, 
-                shell=True, 
-                text=True, 
+                cmd_parts,
+                text=True,
                 check=False,
-                timeout=timeout
+                timeout=timeout,
+                stderr=subprocess.STDOUT if show_output else None
             )
             return "", result.returncode
         else:
             result = subprocess.run(
-                cmd, 
-                shell=True, 
-                capture_output=True, 
-                text=True, 
+                cmd_parts,
+                capture_output=True,
+                text=True,
                 check=False,
                 timeout=timeout
             )
             return result.stdout.strip(), result.returncode
             
     except subprocess.TimeoutExpired:
-        error_msg = f"Command timed out after {timeout}s: {cmd}"
+        error_msg = f"Command timed out after {timeout}s: {' '.join(cmd_parts)}"
         print(f"Error: {error_msg}")
         exit_code = 124
         error_occurred = True
     except FileNotFoundError:
-        error_msg = f"Command not found: {cmd.split()[0] if cmd.split() else 'unknown'}"
+        cmd_name = cmd_parts[0] if cmd_parts else 'unknown'
+        error_msg = f"Command not found: {cmd_name}"
         print(f"Error: {error_msg}")
         exit_code = 127
         error_occurred = True
     except (subprocess.SubprocessError, OSError) as e:
-        error_msg = f"Subprocess error executing '{cmd}': {str(e)}"
+        error_msg = f"Subprocess error executing {' '.join(cmd_parts)}: {str(e)}"
         print(f"Error: {error_msg}")
         exit_code = 1
         error_occurred = True
     except Exception as e:
         # Fallback for any unexpected errors
-        error_msg = f"Unexpected error executing '{cmd}': {type(e).__name__}: {str(e)}"
+        error_msg = f"Unexpected error executing {' '.join(cmd_parts)}: {type(e).__name__}: {str(e)}"
         print(f"Error: {error_msg}")
         import traceback
         traceback.print_exc()
@@ -69,7 +75,7 @@ def run_command(cmd: str, show_output: bool = False, timeout: int = 60) -> tuple
 
 def get_git_diff() -> Optional[str]:
     """Gets git diff --cached for staged files"""
-    staged_files, code = run_command("git diff --cached --name-only")
+    staged_files, code = run_command(["git", "diff", "--cached", "--name-only"])
     if code != 0:
         print("Error checking staged files")
         return None
@@ -81,7 +87,7 @@ def get_git_diff() -> Optional[str]:
     
     print(f"Staged files: {staged_files.replace(chr(10), ', ')}")
     
-    diff, code = run_command("git diff --cached")
+    diff, code = run_command(["git", "diff", "--cached"])
     if code != 0:
         print("Error getting diff")
         return None
@@ -95,12 +101,15 @@ def commit_changes(message: str, description: Optional[str] = None) -> bool:
     if description:
         full_message = f"{message}\n\n{description}"
     
-    escaped_message = full_message.replace('"', '\\"').replace('$', '\\$')
-    
     print("\nCreating commit...")
     
     # Use show_output=True to see git hooks output, and longer timeout for commit operations
-    _, code = run_command(f'git commit -m "{escaped_message}"', show_output=True, timeout=120)
+    # Pass message as separate argument to avoid shell escaping issues
+    _, code = run_command(
+        ["git", "commit", "-m", full_message], 
+        show_output=True, 
+        timeout=120
+    )
     
     if code == 0:
         print("Commit created successfully!")
@@ -136,8 +145,8 @@ def get_smart_diff(diff: str, context_length: Optional[int]) -> str:
     if diff_lines > line_limit:
         print(f"Diff is too large ({diff_lines} > {line_limit} lines), using a brief summary.")
         
-        stats_output, _ = run_command("git diff --cached --stat")
-        name_status_output, _ = run_command("git diff --cached --name-status")
+        stats_output, _ = run_command(["git", "diff", "--cached", "--stat"])
+        name_status_output, _ = run_command(["git", "diff", "--cached", "--name-status"])
         
         return f'''=== CHANGE STATISTICS ===
 {stats_output}

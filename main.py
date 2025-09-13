@@ -34,7 +34,8 @@ def main():
     
     print("Git Auto Commit: generating commit for staged files...")
     
-    _, code = git_utils.run_command("git rev-parse --git-dir")
+    # Check if we're in a git repository
+    _, code = git_utils.run_command(["git", "rev-parse", "--git-dir"])
     if code != 0:
         print("Error: git repository not found.")
         sys.exit(1)
