@@ -1,39 +1,59 @@
 """
 OpenRouter API client for generating commit messages
+
+Copyright (C) 2025 rozeraf
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
 """
 
-import os
 import json
-from typing import Optional, Tuple
+import logging
+import os
+from typing import Optional
+
 import requests
 
+logger = logging.getLogger(__name__)
 
-def get_model_info(model_name: str) -> Optional[dict]:
+
+def get_model_info(model_name: str) -> dict | None:
     """Gets model information from the OpenRouter API"""
     api_url = "https://openrouter.ai/api/v1/models"
-    print("Getting model information...")
+    logger.debug("Getting model information...")
     try:
         response = requests.get(api_url, timeout=15)
         if response.status_code != 200:
-            print(f"Failed to get model list (status: {response.status_code})")
+            logger.error(f"Failed to get model list (status: {response.status_code})")
             return None
         
-        models_data = response.json().get("data", [])
+        data = response.json()
+        models_data = data.get("data", [])
+        
         for model in models_data:
             if model.get("id") == model_name:
-                print(f"Model information for {model_name} received.")
+                logger.debug(f"Model information for {model_name} received.")
                 return model
         
-        print(f"Model '{model_name}' not found.")
+        logger.warning(f"Model '{model_name}' not found.")
         return None
     except requests.exceptions.RequestException as e:
-        print(f"Error requesting model information: {e}")
+        logger.error(f"Error requesting model information: {e}")
         return None
 
 
-def parse_ai_response(full_message: str) -> Tuple[str, Optional[str]]:
+def parse_ai_response(full_message: str) -> tuple[str, str | None]:
     """Splits the full commit message into a subject and description."""
-    lines = full_message.strip().split('\n', 1)
+    lines = full_message.strip().split("\n", 1)
     commit_msg = lines[0].strip()
     description = None
     if len(lines) > 1 and lines[1].strip():
@@ -41,27 +61,27 @@ def parse_ai_response(full_message: str) -> Tuple[str, Optional[str]]:
     return commit_msg, description
 
 
-def generate_commit_message(diff: str, model_info: Optional[dict]) -> Optional[Tuple[str, Optional[str]]]:
+def generate_commit_message(diff: str, model_info: dict | None) -> tuple[str, str | None] | None:
     """Generates a commit message via the OpenRouter API"""
     api_key = os.getenv("OPENROUTER_API_KEY")
     api_url = os.getenv("OPENROUTER_API_URL", "https://openrouter.ai/api/v1/chat/completions")
     model = os.getenv("OPENROUTER_MODEL", "anthropic/claude-3.5-sonnet")
     
     if not api_key:
-        print("Error: OPENROUTER_API_KEY is not set in the .env file.")
-        print("Create a .env file with OPENROUTER_API_KEY=your_key")
+        logger.error("Error: OPENROUTER_API_KEY is not set in the .env file.")
+        logger.error("Create a .env file with OPENROUTER_API_KEY=your_key")
         return None
     
-    print(f"Using API key: {api_key[:8]}...")
-    print(f"URL: {api_url}")
-    print(f"Model: {model}")
+    logger.debug(f"Using API key: {api_key[:8]}...")
+    logger.debug(f"URL: {api_url}")
+    logger.debug(f"Model: {model}")
     
     context_length = None
     if model_info and "context_length" in model_info:
         context_length = int(model_info["context_length"])
-        print(f"Model context length: {context_length} tokens")
+        logger.debug(f"Model context length: {context_length} tokens")
     else:
-        print("Could not determine context length, using default values.")
+        logger.debug("Could not determine context length, using default values.")
 
     from . import git_utils
     smart_diff = git_utils.get_smart_diff(diff, context_length)
@@ -73,7 +93,7 @@ def generate_commit_message(diff: str, model_info: Optional[dict]) -> Optional[T
         "X-Title": "Git Auto Commit"
     }
     
-    system_prompt = '''Your task is to generate a commit message based on the provided diff, following the Conventional Commits specification.
+    system_prompt = """Your task is to generate a commit message based on the provided diff, following the Conventional Commits specification.
 
 RULES:
 1. The output must be ONLY the commit message text, without any extra words or explanations.
@@ -93,7 +113,7 @@ RULES:
     - `ci`: Changes to CI configuration files and scripts.
     - `chore`: Other changes that don't modify src or test files.
     - `revert`: Reverts a previous commit.
-5. The body, if present, should have a header, a list of changes starting with `-`, and an optional footer.'''
+5. The body, if present, should have a header, a list of changes starting with `-`, and an optional footer."""
 
     payload = {
         "model": model,
@@ -112,8 +132,8 @@ RULES:
     }
     
     try:
-        print("Generating commit message...")
-        print("Sending request to API...")
+        logger.debug("Generating commit message...")
+        logger.debug("Sending request to API...")
         
         response = requests.post(
             api_url,
@@ -122,55 +142,56 @@ RULES:
             timeout=45
         )
         
-        print(f"Response status: {response.status_code}")
+        logger.debug(f"Response status: {response.status_code}")
         
         if response.status_code != 200:
-            print(f"API Error: {response.status_code}")
+            logger.error(f"API Error: {response.status_code}")
             try:
                 error_data = response.json()
-                print(f"Error details: {error_data}")
+                logger.error(f"Error details: {error_data}")
             except json.JSONDecodeError:
-                print(f"Response body: {response.text}")
+                logger.error(f"Response body: {response.text}")
             return None
-        
+
         response_text = response.text.strip()
         if not response_text:
-            print("Empty response from API")
+            logger.error("Empty response from API")
             return None
             
-        print(f"Received response ({len(response_text)} characters)")
+        logger.debug(f"Received response ({len(response_text)} characters)")
         
         try:
             data = response.json()
         except json.JSONDecodeError as e:
-            print(f"JSON parsing error: {e}")
-            print(f"First 200 characters of response: {response_text[:200]}")
+            logger.error(f"JSON parsing error: {e}")
+            logger.debug(f"First 200 characters of response: {response_text[:200]}")
             return None
-        
+
         if "choices" not in data or len(data["choices"]) == 0:
-            print(f"Invalid response format: {data}")
+            logger.error("Invalid response format from API")
+            logger.debug(f"Response data: {data}")
             return None
-        
+
         if "message" not in data["choices"][0]:
-            print(f"Missing message field: {data['choices'][0]}")
+            logger.error("Invalid response format from API")
+            logger.debug(f"Missing message field: {data['choices'][0]}")
             return None
-            
+
         ai_response = data["choices"][0]["message"]["content"].strip()
-        print(f"AI Response:\n{ai_response}")
+        logger.debug(f"AI Response:\n{ai_response}")
         
         return parse_ai_response(ai_response)
-        
     except requests.exceptions.Timeout:
-        print("Request timeout (45s). Please try again.")
+        logger.error("Request timeout (45s). Please try again.")
         return None
     except requests.exceptions.ConnectionError:
-        print("API connection error. Check your internet connection.")
+        logger.error("API connection error. Check your internet connection.")
         return None
     except KeyboardInterrupt:
-        print("\nRequest cancelled by user")
+        logger.info("\nRequest cancelled by user")
         return None
     except Exception as e:
-        print(f"Unexpected error: {type(e).__name__}: {e}")
+        logger.error(f"Unexpected error: {type(e).__name__}: {e}")
         import traceback
         traceback.print_exc()
         return None
@@ -183,9 +204,9 @@ def test_api_key() -> bool:
     model = os.getenv("OPENROUTER_MODEL", "anthropic/claude-3.5-sonnet")
     
     if not api_key:
-        print("Error: OPENROUTER_API_KEY is not set in the .env file.")
+        logger.error("Error: OPENROUTER_API_KEY is not set in the .env file.")
         return False
-    
+
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json"
@@ -198,9 +219,9 @@ def test_api_key() -> bool:
     }
     
     try:
-        print("Testing API key...")
-        print(f"URL: {api_url}")
-        print(f"Model: {model}")
+        logger.info("Testing API key...")
+        logger.debug(f"URL: {api_url}")
+        logger.debug(f"Model: {model}")
         
         response = requests.post(
             api_url,
@@ -209,14 +230,13 @@ def test_api_key() -> bool:
             timeout=30
         )
         
-        print(f"Status: {response.status_code}")
+        logger.debug(f"Status: {response.status_code}")
         if response.status_code == 200:
-            print("API key is working!")
+            logger.info("API key is working!")
             return True
         else:
-            print(f"Problem with API key: {response.text}")
+            logger.error(f"Problem with API key: {response.text}")
             return False
-            
     except Exception as e:
-        print(f"Testing error: {e}")
+        logger.error(f"Testing error: {e}")
         return False

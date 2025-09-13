@@ -1,0 +1,102 @@
+[tool.poetry]
+name = "git-autocommit"
+version = "1.0.0"
+description = "Automatic git commit message generation using AI"
+authors = ["Rafael Rozer <your-email@example.com>"]
+license = "GPL-3.0-only"
+readme = "README.md"
+repository = "https://github.com/rozeraf/git-auto-commit"
+packages = [
+    { include = "src", from = "." }
+]
+keywords = ["git", "ai", "commit", "automation", "openrouter"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Version Control",
+    "Topic :: Software Development :: User Interfaces",
+    "Environment :: Console",
+]
+
+[tool.poetry.dependencies]
+python = "^3.11.13"
+requests = "^2.31.0"
+python-dotenv = "^1.0.0"
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.1.0"
+pytest = "^7.4.0"
+pytest-cov = "^4.1.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+autocommit = "main:main"
+git-autocommit = "main:main"
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.ruff.lint]
+extend-select = ["E", "F", "I", "UP", "B", "Q", "T20"]
+ignore = ["E501", "F401", "F841", "B008"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
+"tests/**" = ["S101", "E501"]
+"*/__init__.py" = ["F401"]
+
+[tool.black]
+line-length = 88
+target-version = ['py311']
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.git
+  | \.venv
+  | \.pytest_cache
+  | \.mypy_cache
+  | \.ruff_cache
+  | dist
+  | build
+  | buck-out
+  | \.eggs
+  | __pycache__
+  | .eggs
+)/
+'''
+
+[tool.pyenv]
+python_version = "3.11.13"
+allowlist = ["3.11.13", "3.12.*"]
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+strict_equality = true
+
+[[tool.mypy.overrides]]
+module = [
+    "requests.*",
+    "dotenv.*",
+    "subprocess.*",
+]
+ignore_missing_imports = true

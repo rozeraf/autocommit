@@ -1,82 +1,105 @@
+# Git Auto Commit
 
-# autocommit
+Automatic git commit message generation using AI via OpenRouter API.
 
-**autocommit** is a Python utility for automatically generating smart commit messages using AI. It analyzes your staged code changes and creates a meaningful commit message in English that follows the [Conventional Commits](https://www.conventionalcommits.org/) specification.
+## 🚀 Quick Start
 
+### 1. Setup Environment
 
-## Features
+Ensure Python 3.11+ and Git are installed. Use pyenv for version management:
 
-- **Automatic Commit Generation:** Instantly creates a commit title and description based on your staged changes.
-- **Conventional Commits:** Messages follow the popular Conventional Commits standard for better commit history.
-- **AI Model Integration:** Works with various AI models via API (OpenRouter by default, easily extendable).
-- **Handles Large Diffs:** Compresses and summarizes large diffs before sending to the AI.
-- **Smart Context Adaptation:** Automatically detects the model's context size and adjusts the data sent.
-- **Interactive Confirmation:** Always shows you the generated message for review and confirmation before committing.
+```bash
+# Install pyenv (if needed)
+curl https://pyenv.run | bash
+# Add to ~/.zshrc and source it
 
-
-## How It Works
-
-1.  The script retrieves changes from the Git index (`git diff --staged`).
-2.  The prepared diff is sent to an AI model for analysis.
-3.  The AI generates a commit message in English.
-4.  You preview the message and confirm or cancel the commit.
-5.  After confirmation, the commit is created automatically.
-
-
-## Requirements
-
-- Python 3 and Git must be installed.
-- It is recommended to use this tool on Linux for best performance and compatibility.
-
-
-## Installation
-
-1.  **Clone the repository:**
-    ```bash
-    git clone https://github.com/rozeraf/autocommit.git
-    cd autocommit
-    ```
-2.  **Install dependencies:**
-    ```bash
-    pip install -r requirements.txt
-    ```
-3.  **Configure environment variables:**
-    Create a `.env` file in the project root and add your API key. For example:
-    ```env
-    # Get your free key from https://openrouter.ai/
-    OPENROUTER_API_KEY="sk-or-v1-..."
-    # Optionally, set a specific model and endpoint:
-    OPENROUTER_MODEL="anthropic/claude-3.5-sonnet"
-    OPENROUTER_API_URL="https://openrouter.ai/api/v1/chat/completions"
-    ```
-
-
-## Supported API Providers
-
-### Tested providers
-
-| Provider    | Endpoint URL                      | Documentation                  |
-|-------------|-----------------------------------|---------------------------------|
-| OpenRouter  | `https://openrouter.ai/api/v1/`   | [Docs](https://openrouter.ai/docs) |
-
-You can configure the API endpoint and model by setting these variables in your `.env`:
-```env
-OPENROUTER_API_URL="https://openrouter.ai/api/v1/chat/completions"
-OPENROUTER_MODEL="meta-llama/llama-3.1-8b-instruct"
+pyenv install 3.11.13
+pyenv local 3.11.13
 ```
 
+### 2. Install Dependencies
 
-## Usage
+```bash
+# Clone repo
+git clone https://github.com/rozeraf/autocommit.git
+cd autocommit
 
-1.  **Stage files for commit:**
-    ```bash
-    git add <file1> <file2> ...
-    ```
-2.  **Run the script:**
-    ```bash
-    python main.py
-    ```
-3.  **Review and confirm:**
-    The generated commit message will be shown. Confirm to create the commit, or cancel to abort.
+# Install with Poetry
+curl -sSL https://install.python-poetry.org | python3 -
+poetry install
+poetry run pre-commit install
+```
 
-You can also use `python main.py --test-api` to check your API key and connection.
+### 3. Configure API Key
+
+Create `.env` file:
+
+```bash
+echo "OPENROUTER_API_KEY=sk-or-v1-your-key-here" > .env
+echo "OPENROUTER_MODEL=openrouter/sonoma-dusk-alpha" >> .env
+```
+
+Get key from https://openrouter.ai.
+
+### 4. Usage
+
+```bash
+# Stage changes
+git add .
+
+# Create AI commit
+poetry run python main.py
+
+# Or with confirmation skip
+poetry run python main.py -y
+
+# Test API
+poetry run python main.py --test-api
+```
+
+## 🛠️ Features
+
+- Analyzes Git changes for meaningful commit messages
+- Integrates with OpenRouter AI models
+- Secure Git operations without shell injection
+- CLI-friendly interface
+
+## 📦 Dependencies
+
+Managed via Poetry in `pyproject.toml`. Key packages:
+- `requests` for API calls
+- `python-dotenv` for environment vars
+
+Development: `ruff`, `pytest`, `mypy`, `pre-commit`.
+
+## 📁 Project Structure
+
+```
+autocommit/
+├── src/                    # Core package
+│   ├── __init__.py
+│   ├── api_client.py      # OpenRouter integration
+│   └── git_utils.py       # Git operations
+├── main.py                # CLI entrypoint
+├── pyproject.toml         # Poetry config
+├── requirements.txt       # Legacy pip support
+└── LICENSE                # GPL-3.0
+```
+
+## 🤝 Contributing
+
+1. Fork the repo
+2. Create feature branch: `git checkout -b feature/amazing-feature`
+3. Install dev deps: `poetry install --with dev`
+4. Commit: `git add . && poetry run python main.py`
+5. Push and create PR
+
+Ensure Python 3.11.13 and run `poetry run pytest` before submitting.
+
+## 📄 License
+
+GPL-3.0 - See [LICENSE](LICENSE) file for details.
+
+---
+
+**Status: Production Ready** | **Python: 3.11+** | **License: GPL-3.0**
