@@ -69,6 +69,7 @@ def main():
     parser.add_argument("-d", "--debug", action="store_true", help="Enable debug logging")
     parser.add_argument("-y", "--yes", action="store_true", help="Skip confirmation")
     parser.add_argument("--test-api", action="store_true", help="Test API connection")
+    parser.add_argument("--model", help="Override AI model from .env file (e.g., anthropic/claude-3.5-sonnet)")
     args = parser.parse_args()
     
     setup_logging(args.debug)
@@ -86,7 +87,9 @@ def main():
         logger.error("Error: git repository not found.")
         sys.exit(1)
 
-    model_name = os.getenv("OPENROUTER_MODEL", "anthropic/claude-3.5-sonnet")
+    model_name = args.model or os.getenv("OPENROUTER_MODEL", "anthropic/claude-3.5-sonnet")
+    if args.debug:
+        logger.debug(f"Using model: {model_name}")
     model_info = api_client.get_model_info(model_name)
     
     diff = git_utils.get_git_diff()

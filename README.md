@@ -50,8 +50,11 @@ git add .
 # Create AI commit
 poetry run python main.py
 
-# Or with confirmation skip
+# Skip confirmation prompt
 poetry run python main.py -y
+
+# Use a specific model
+poetry run python main.py --model anthropic/claude-3.5-sonnet
 
 # Test API
 poetry run python main.py --test-api
