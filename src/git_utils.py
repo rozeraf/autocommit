@@ -6,16 +6,18 @@ import subprocess
 from typing import Optional
 
 
-def run_command(cmd: str, show_output: bool = False) -> tuple[str, int]:
+def run_command(cmd: str, show_output: bool = False, timeout: int = 60) -> tuple[str, int]:
     """Executes a command and returns the output and return code"""
     try:
         if show_output:
             # Show real-time output for commands that may have interactive output (e.g., git hooks)
+            # Don't capture output, let it go directly to terminal
             result = subprocess.run(
                 cmd, 
                 shell=True, 
                 text=True, 
-                check=False
+                check=False,
+                timeout=timeout
             )
             return "", result.returncode
         else:
@@ -24,28 +26,45 @@ def run_command(cmd: str, show_output: bool = False) -> tuple[str, int]:
                 shell=True, 
                 capture_output=True, 
                 text=True, 
-                check=False
+                check=False,
+                timeout=timeout
             )
             return result.stdout.strip(), result.returncode
+    except subprocess.TimeoutExpired:
+        error_msg = f"Command timed out after {timeout}s: {cmd}"
+        if show_output:
+            print(f"\nError: {error_msg}")
+            return "", 124
+        else:
+            print(f"Error: {error_msg}")
+            return error_msg, 124
     except FileNotFoundError:
         error_msg = f"Command not found: {cmd.split()[0] if cmd.split() else 'unknown'}"
-        print(f"Error: {error_msg}")
-        return error_msg, 127  # 127 is a common exit code for command not found
-    except subprocess.TimeoutExpired:
-        error_msg = f"Command timed out: {cmd}"
-        print(f"Error: {error_msg}")
-        return error_msg, 124  # 124 is a common exit code for timeout
+        if show_output:
+            print(f"\nError: {error_msg}")
+            return "", 127
+        else:
+            print(f"Error: {error_msg}")
+            return error_msg, 127
     except (subprocess.SubprocessError, OSError) as e:
         error_msg = f"Subprocess error executing '{cmd}': {str(e)}"
-        print(f"Error: {error_msg}")
-        return error_msg, 1
+        if show_output:
+            print(f"\nError: {error_msg}")
+            return "", 1
+        else:
+            print(f"Error: {error_msg}")
+            return error_msg, 1
     except Exception as e:
         # Fallback for any unexpected errors
         error_msg = f"Unexpected error executing '{cmd}': {type(e).__name__}: {str(e)}"
-        print(f"Error: {error_msg}")
-        import traceback
-        traceback.print_exc()
-        return error_msg, 1
+        if show_output:
+            print(f"\nError: {error_msg}")
+            return "", 1
+        else:
+            print(f"Error: {error_msg}")
+            import traceback
+            traceback.print_exc()
+            return error_msg, 1
 
 
 def get_git_diff() -> Optional[str]:
@@ -76,12 +95,12 @@ def commit_changes(message: str, description: Optional[str] = None) -> bool:
     if description:
         full_message = f"{message}\n\n{description}"
     
-    escaped_message = full_message.replace('"', '"').replace('`', '`')
+    escaped_message = full_message.replace('"', '\\"').replace('$', '\\$')
     
     print("\nCreating commit...")
     
-    # Use show_output=True to see git hooks output
-    _, code = run_command(f'git commit -m "{escaped_message}"', show_output=True)
+    # Use show_output=True to see git hooks output, and longer timeout for commit operations
+    _, code = run_command(f'git commit -m "{escaped_message}"', show_output=True, timeout=120)
     
     if code == 0:
         print("Commit created successfully!")
