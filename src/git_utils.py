@@ -27,8 +27,25 @@ def run_command(cmd: str, show_output: bool = False) -> tuple[str, int]:
                 check=False
             )
             return result.stdout.strip(), result.returncode
+    except FileNotFoundError:
+        error_msg = f"Command not found: {cmd.split()[0] if cmd.split() else 'unknown'}"
+        print(f"Error: {error_msg}")
+        return error_msg, 127  # 127 is a common exit code for command not found
+    except subprocess.TimeoutExpired:
+        error_msg = f"Command timed out: {cmd}"
+        print(f"Error: {error_msg}")
+        return error_msg, 124  # 124 is a common exit code for timeout
+    except (subprocess.SubprocessError, OSError) as e:
+        error_msg = f"Subprocess error executing '{cmd}': {str(e)}"
+        print(f"Error: {error_msg}")
+        return error_msg, 1
     except Exception as e:
-        return str(e), 1
+        # Fallback for any unexpected errors
+        error_msg = f"Unexpected error executing '{cmd}': {type(e).__name__}: {str(e)}"
+        print(f"Error: {error_msg}")
+        import traceback
+        traceback.print_exc()
+        return error_msg, 1
 
 
 def get_git_diff() -> Optional[str]:
