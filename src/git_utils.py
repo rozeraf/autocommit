@@ -8,6 +8,9 @@ from typing import Optional
 
 def run_command(cmd: str, show_output: bool = False, timeout: int = 60) -> tuple[str, int]:
     """Executes a command and returns the output and return code"""
+    error_occurred = False
+    exit_code = 1
+    
     try:
         if show_output:
             # Show real-time output for commands that may have interactive output (e.g., git hooks)
@@ -30,41 +33,38 @@ def run_command(cmd: str, show_output: bool = False, timeout: int = 60) -> tuple
                 timeout=timeout
             )
             return result.stdout.strip(), result.returncode
+            
     except subprocess.TimeoutExpired:
         error_msg = f"Command timed out after {timeout}s: {cmd}"
-        if show_output:
-            print(f"\nError: {error_msg}")
-            return "", 124
-        else:
-            print(f"Error: {error_msg}")
-            return error_msg, 124
+        print(f"Error: {error_msg}")
+        exit_code = 124
+        error_occurred = True
     except FileNotFoundError:
         error_msg = f"Command not found: {cmd.split()[0] if cmd.split() else 'unknown'}"
-        if show_output:
-            print(f"\nError: {error_msg}")
-            return "", 127
-        else:
-            print(f"Error: {error_msg}")
-            return error_msg, 127
+        print(f"Error: {error_msg}")
+        exit_code = 127
+        error_occurred = True
     except (subprocess.SubprocessError, OSError) as e:
         error_msg = f"Subprocess error executing '{cmd}': {str(e)}"
-        if show_output:
-            print(f"\nError: {error_msg}")
-            return "", 1
-        else:
-            print(f"Error: {error_msg}")
-            return error_msg, 1
+        print(f"Error: {error_msg}")
+        exit_code = 1
+        error_occurred = True
     except Exception as e:
         # Fallback for any unexpected errors
         error_msg = f"Unexpected error executing '{cmd}': {type(e).__name__}: {str(e)}"
-        if show_output:
-            print(f"\nError: {error_msg}")
-            return "", 1
-        else:
-            print(f"Error: {error_msg}")
-            import traceback
-            traceback.print_exc()
-            return error_msg, 1
+        print(f"Error: {error_msg}")
+        import traceback
+        traceback.print_exc()
+        exit_code = 1
+        error_occurred = True
+    
+    # Return empty string for stdout when show_output=True or error occurred
+    # This prevents error messages from being passed to shell
+    if show_output or error_occurred:
+        return "", exit_code
+    else:
+        # For normal captured output with errors, return the error message
+        return error_msg, exit_code
 
 
 def get_git_diff() -> Optional[str]:
