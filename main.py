@@ -66,21 +66,56 @@ def show_confirmation(commit_msg: str, description: str | None, skip_confirm: bo
             return 78  # Safe fallback (80 - 2)
     
     def wrap_text(text: str, width: int, first_line: bool = False) -> list[str]:
-        """Wrap text to fit within width, preserving words"""
+        """Wrap text to fit within width, preserving words and handling bullet points"""
         import textwrap
         # For commit messages, try to keep first line shorter if it's long content
         target_width = width - 4  # Basic padding
-        if first_line and len(text) > target_width - 10:  # If content is long
+        
+        # Handle bullet points with proper indentation
+        if text.lstrip().startswith('- '):
+            indent = len(text) - len(text.lstrip())
+            bullet_text = text[indent:]
+            subsequent_indent = ' ' * (indent + 2)  # Align with text after bullet
+            wrapped = textwrap.wrap(
+                bullet_text,
+                width=target_width - indent,
+                initial_indent='',
+                subsequent_indent=' ' * 2,  # Indent continuation lines
+                break_long_words=True,
+                break_on_hyphens=True
+            )
+            return [(' ' * indent + line) for line in wrapped]
+        
+        # Handle first line length for commit messages
+        if first_line and len(text) > target_width - 10:
             target_width = min(target_width, 50)  # Limit first line to 50 chars
+            
         return textwrap.wrap(text, width=target_width, break_long_words=True, break_on_hyphens=True)
     
     term_width = get_terminal_width()
     
     # Header with stats
-    preview_width = min(term_width, 60)  # Keep header reasonably sized
+    preview_width = min(term_width, 65)  # Keep header reasonably sized
     header_text = " Commit Preview "
-    stats_text = f"[{len(commit_msg.split()) + (len(description.split()) if description else 0)} words]"
-    right_space = preview_width - len(header_text) - len(stats_text) - 2
+    
+    # Calculate word and char counts
+    msg_words = len(commit_msg.split())
+    desc_words = len(description.split()) if description else 0
+    total_words = msg_words + desc_words
+    total_chars = len(commit_msg) + (len(description) if description else 0)
+    
+    # Format stats with colors
+    stats_parts = []
+    if msg_words > 0:
+        stats_parts.append(f"{Fore.GREEN}{msg_words}{Style.RESET_ALL} words")
+    if desc_words > 0:
+        stats_parts.append(f"+{Fore.CYAN}{desc_words}{Style.RESET_ALL} in desc")
+    stats_parts.append(f"{Fore.BLUE}{total_chars}{Style.RESET_ALL} chars")
+    stats_text = "[" + ", ".join(stats_parts) + "]"
+    
+    right_space = preview_width - len(header_text) - len(stats_text.replace(f"{Fore.GREEN}", "")
+        .replace(f"{Fore.CYAN}", "").replace(f"{Fore.BLUE}", "")
+        .replace(f"{Style.RESET_ALL}", "")) - 2
     
     print()
     print(f"{Fore.CYAN}{Style.BRIGHT}╭─{header_text}{'─' * right_space}{stats_text}╮{Style.RESET_ALL}")
@@ -118,7 +153,8 @@ def show_confirmation(commit_msg: str, description: str | None, skip_confirm: bo
     
     # Description box if present - label on left side of border with structured content
     if description:
-        print()
+        # Add consistent spacing between boxes
+        print(f"\n{' ' * ((term_width - 40) // 2)}{Style.DIM}· · ·{Style.RESET_ALL}\n")
         desc_lines = []
         
         # Structure description into sections
@@ -126,6 +162,7 @@ def show_confirmation(commit_msg: str, description: str | None, skip_confirm: bo
         details = []
         current_list = changes
         
+        # Parse sections more intelligently
         for line in description.split('\n'):
             line = line.strip()
             if line.lower().startswith(('changes:', 'details:', 'impact:', 'notes:')):
@@ -134,9 +171,9 @@ def show_confirmation(commit_msg: str, description: str | None, skip_confirm: bo
             if line:
                 current_list.append(line)
         
-        # Format main changes first
+        # Format main changes first with proper indentation
         if changes:
-            desc_lines.append("Changes:")
+            desc_lines.append(f"{Fore.CYAN}Changes:{Style.RESET_ALL}")
             for line in changes:
                 if not line.startswith('-'):
                     line = '- ' + line
@@ -144,27 +181,31 @@ def show_confirmation(commit_msg: str, description: str | None, skip_confirm: bo
         
         # Then additional details if any
         if details:
-            if changes:  # Add separator if we had changes
+            if changes:  # Add visual separator between sections
                 desc_lines.append("")
-            desc_lines.append("Details:")
+            desc_lines.append(f"{Fore.CYAN}Details:{Style.RESET_ALL}")
             for line in details:
                 if not line.startswith('-'):
                     line = '- ' + line
                 desc_lines.extend(wrap_text(line, term_width))
         
-        max_len = max(len(line) for line in desc_lines) if desc_lines else 0
-        width = min(max(max_len + 4, 40), term_width)  # Adaptive width within terminal bounds
+        # Calculate optimal width based on content
+        max_len = max(len(line.replace(f"{Fore.CYAN}", "").replace(f"{Style.RESET_ALL}", ""))
+                     for line in desc_lines) if desc_lines else 0
+        width = min(max(max_len + 6, 45), term_width - 4)  # Add more padding, min 45 chars
         
-        # Top border with left-aligned "Description" label
+        # Top border with left-aligned "Description" label and accent color
         label = "Description"
         label_padding = " " * (4 - len(label) // 2)
-        top_border = f"╭─{label_padding}{label}─{'─' * (width - len(label) - 6)}╮"
+        top_border = f"╭─{label_padding}{Fore.CYAN}{label}{Style.RESET_ALL}─{'─' * (width - len(label) - 6)}╮"
         print(f"{Style.BRIGHT}{top_border}{Style.RESET_ALL}")
         
-        # Content lines with proper padding
+        # Content lines with proper padding and color preservation
         for line in desc_lines:
-            padded_line = line.ljust(width - 2)
-            print(f"{Style.BRIGHT}│{padded_line}│{Style.RESET_ALL}")
+            # Calculate padding considering color codes
+            visible_len = len(line.replace(f"{Fore.CYAN}", "").replace(f"{Style.RESET_ALL}", ""))
+            padding = " " * (width - 2 - visible_len)
+            print(f"{Style.BRIGHT}│ {line}{padding}│{Style.RESET_ALL}")
         
         # Bottom border
         print(f"{Style.BRIGHT}╰{'─' * (width - 2)}╯{Style.RESET_ALL}")
