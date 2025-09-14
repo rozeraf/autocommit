@@ -18,7 +18,6 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 import logging
 import subprocess
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 

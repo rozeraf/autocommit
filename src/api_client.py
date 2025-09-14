@@ -19,7 +19,6 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 import json
 import logging
 import os
-from typing import Optional
 
 import requests
 from requests.adapters import HTTPAdapter
@@ -134,7 +133,6 @@ def parse_ai_response(full_message: str) -> tuple[str, str | None]:
         r'\n{2,}',  # Multiple newlines
     ]
     
-    import re
     for pattern in unwanted_patterns:
         cleaned_message = re.sub(pattern, '', cleaned_message, flags=re.IGNORECASE | re.DOTALL)
         cleaned_message = re.sub(r'\n\s*\n', '\n\n', cleaned_message)  # Clean up extra newlines

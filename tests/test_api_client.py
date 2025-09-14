@@ -1,4 +1,3 @@
-import pytest
 
 from src.api_client import parse_ai_response
 
