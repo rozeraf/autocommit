@@ -56,11 +56,11 @@ logger = logging.getLogger(__name__)
 
 def show_confirmation(commit_msg: str, description: str | None, skip_confirm: bool = False) -> bool:
     """Shows confirmation before committing"""
-    print(f"\n{Style.BRIGHT}--- Commit Preview ---{Style.RESET_ALL}")
-    print(f"{Fore.YELLOW}Message:{Style.RESET_ALL} {Fore.GREEN}{commit_msg}")
+    print(f"\n{Style.BRIGHT}╭─ Commit Preview ─" + Style.RESET_ALL)
+    print(f"{Style.BRIGHT}│{Style.RESET_ALL} {Fore.YELLOW}Message:{Style.RESET_ALL} {Fore.GREEN}{commit_msg}")
     if description:
-        print(f"{Fore.YELLOW}Description:{Style.RESET_ALL}\n{Fore.CYAN}{description}")
-    print(f"{Style.BRIGHT}-----------------------------")
+        print(f"{Style.BRIGHT}│{Style.RESET_ALL} {Fore.YELLOW}Description:{Style.RESET_ALL}\n{Fore.CYAN}{description}")
+    print(f"{Style.BRIGHT}╰───────────────────" + Style.RESET_ALL)
 
     if skip_confirm:
         return True
@@ -95,39 +95,39 @@ def main():
         print("\n1. Checking for Git repository...")
         _, code = git_utils.run_command(["git", "rev-parse", "--git-dir"])
         if code != 0:
-            print(f"{Fore.RED}FAIL: Not a Git repository.")
+            print(f"{Fore.RED}✗ FAIL: Not a Git repository.")
             all_passed = False
         else:
-            print(f"{Fore.GREEN}OK: Git repository found.")
+            print(f"{Fore.GREEN}✓ OK: Git repository found.")
 
         # 2. Check for API Key
         print("\n2. Checking for OPENROUTER_API_KEY...")
         api_key = os.getenv("OPENROUTER_API_KEY")
         if not api_key:
-            print(f"{Fore.RED}FAIL: OPENROUTER_API_KEY environment variable not set.")
+            print(f"{Fore.RED}✗ FAIL: OPENROUTER_API_KEY environment variable not set.")
             all_passed = False
         else:
-            print(f"{Fore.GREEN}OK: OPENROUTER_API_KEY is set.")
+            print(f"{Fore.GREEN}✓ OK: OPENROUTER_API_KEY is set.")
 
         # 3. Check git_utils.get_git_diff functionality
         print("\n3. Checking for staged files (via git_utils)...")
         staged_files, code = git_utils.run_command(["git", "diff", "--cached", "--name-only"])
         if code != 0:
-            print(f"{Fore.RED}FAIL: Command 'git diff --cached --name-only' failed.")
+            print(f"{Fore.RED}✗ FAIL: Command 'git diff --cached --name-only' failed.")
             all_passed = False
         else:
-            print(f"{Fore.GREEN}OK: Can check for staged files.")
+            print(f"{Fore.GREEN}✓ OK: Can check for staged files.")
             if not staged_files.strip():
                 print(f"{Fore.YELLOW}NOTE: No files are currently staged.")
 
         # 4. Run unit tests
         print("\n4. Running unit tests with pytest...")
-        _, code = git_utils.run_command(["poetry", "run", "pytest"], show_output=True)
+        _, code = git_utils.run_command(["pytest"], show_output=True)
         if code != 0:
-            print(f"{Fore.RED}FAIL: Unit test suite failed.{Style.RESET_ALL}")
+            print(f"{Fore.RED}✗ FAIL: Unit test suite failed.{Style.RESET_ALL}")
             all_passed = False
         else:
-            print(f"{Fore.GREEN}OK: Unit test suite passed.{Style.RESET_ALL}")
+            print(f"{Fore.GREEN}✓ OK: Unit test suite passed.{Style.RESET_ALL}")
 
         if all_passed:
             print(f"\n{Fore.GREEN}{Style.BRIGHT}All self-tests passed!{Style.RESET_ALL}")
@@ -149,13 +149,13 @@ def main():
     if args.debug:
         logger.debug(f"Using model: {model_name}")
 
-    spinner = Halo(text=f"Fetching info for model '{model_name}'...", spinner="dots")
+    spinner = Halo(text=f" Fetching info for model '{model_name}'...", spinner="dots")
     spinner.start()
     model_info = api_client.get_model_info(model_name)
     if model_info:
-        spinner.succeed("Model info fetched.")
+        spinner.succeed("✓ Model info fetched.")
     else:
-        spinner.fail("Failed to fetch model info.")
+        spinner.fail("✗ Failed to fetch model info.")
         sys.exit(1)
 
     diff = git_utils.get_git_diff()
@@ -167,9 +167,9 @@ def main():
         spinner.start()
         result = api_client.generate_commit_message(diff, model_info)
         if result:
-            spinner.succeed("Commit message generated.")
+            spinner.succeed("✓ Commit message generated.")
         else:
-            spinner.fail("Failed to generate commit message.")
+            spinner.fail("✗ Failed to generate commit message.")
 
         if not result:
             print(f"{Fore.RED}Try: python3 main.py --test-api")
@@ -178,11 +178,11 @@ def main():
         commit_msg, description = result
 
         if args.dry_run:
-            print(f"\n{Style.BRIGHT}--- Dry Run: Commit Message ---")
-            print(f"{Fore.YELLOW}Message:{Style.RESET_ALL} {Fore.GREEN}{commit_msg}")
+            print(f"\n{Style.BRIGHT}╭─ Dry Run: Commit Message ─╮")
+            print(f"│ {Fore.YELLOW}Message:{Style.RESET_ALL} {Fore.GREEN}{commit_msg}")
             if description:
-                print(f"{Fore.YELLOW}Description:{Style.RESET_ALL}\n{Fore.CYAN}{description}")
-            print(f"{Style.BRIGHT}---------------------------------")
+                print(f"│ {Fore.YELLOW}Description:{Style.RESET_ALL}\n{Fore.CYAN}{description}")
+            print(f"{Style.BRIGHT}╰──────────────────────────╯")
             sys.exit(0)
 
         if show_confirmation(commit_msg, description, args.yes):

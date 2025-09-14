@@ -24,10 +24,8 @@ pyenv local 3.11.13
 git clone https://github.com/rozeraf/autocommit.git
 cd autocommit
 
-# Install with Poetry
-curl -sSL https://install.python-poetry.org | python3 -
-poetry install
-poetry run pre-commit install
+# Install with pip
+pip install -r requirements.txt
 ```
 
 ### 3. Configure API Key
@@ -48,19 +46,19 @@ Get key from https://openrouter.ai.
 git add .
 
 # Create AI commit
-poetry run python main.py
+python3 main.py
 
 # Skip confirmation prompt
-poetry run python main.py -y
+python3 main.py -y
 
 # Generate message without committing (dry run)
-poetry run python main.py --dry-run
+python3 main.py --dry-run
 
 # Use a specific model
-poetry run python main.py --model anthropic/claude-3.5-sonnet
+python3 main.py --model anthropic/claude-3.5-sonnet
 
 # Test API
-poetry run python main.py --test-api
+python3 main.py --test-api
 ```
 
 ## 🛠️ Features
@@ -73,7 +71,7 @@ poetry run python main.py --test-api
 
 ## 📦 Dependencies
 
-Managed via Poetry in `pyproject.toml`. Key packages:
+Managed via pip in `requirements.txt`. Key packages:
 - `requests` for API calls
 - `python-dotenv` for environment vars
 
@@ -88,8 +86,7 @@ autocommit/
 │   ├── api_client.py      # OpenRouter integration
 │   └── git_utils.py       # Git operations
 ├── main.py                # CLI entrypoint
-├── pyproject.toml         # Poetry config
-├── requirements.txt       # Legacy pip support
+├── requirements.txt       # pip support
 └── LICENSE                # GPL-3.0
 ```
 
@@ -97,11 +94,11 @@ autocommit/
 
 1. Fork the repo
 2. Create feature branch: `git checkout -b feature/amazing-feature`
-3. Install dev deps: `poetry install --with dev`
-4. Commit: `git add . && poetry run python main.py`
+3. Install dev deps: `pip install -r requirements.txt`
+4. Commit: `git add . && python3 main.py`
 5. Push and create PR
 
-Ensure Python 3.11.13 and run `poetry run pytest` before submitting.
+Ensure Python 3.11.13 and run `pytest` before submitting.
 
 ## 📄 License
 
