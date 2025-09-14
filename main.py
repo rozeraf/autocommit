@@ -76,7 +76,7 @@ def main():
     parser.add_argument("-y", "--yes", action="store_true", help="Skip confirmation")
     parser.add_argument("--dry-run", action="store_true", help="Generate and print commit message without committing")
     parser.add_argument("--test-api", action="store_true", help="Test API connection")
-    parser.add_argument("--test", action="store_true", help="Run with a mock commit message to test the flow without calling the API")
+    parser.add_argument("--test", action="store_true", help="Run a series of self-tests to check application health")
     parser.add_argument("--model", help="Override AI model from .env file (e.g., anthropic/claude-3.5-sonnet)")
     args = parser.parse_args()
 
@@ -85,6 +85,46 @@ def main():
     if args.test_api:
         api_client.test_api_key()
         return
+
+    if args.test:
+        print("Running application self-tests...")
+        all_passed = True
+
+        # 1. Check for git repo
+        print("\n1. Checking for Git repository...")
+        _, code = git_utils.run_command(["git", "rev-parse", "--git-dir"])
+        if code != 0:
+            print(f"{Fore.RED}FAIL: Not a Git repository.")
+            all_passed = False
+        else:
+            print(f"{Fore.GREEN}OK: Git repository found.")
+
+        # 2. Check for API Key
+        print("\n2. Checking for OPENROUTER_API_KEY...")
+        api_key = os.getenv("OPENROUTER_API_KEY")
+        if not api_key:
+            print(f"{Fore.RED}FAIL: OPENROUTER_API_KEY environment variable not set.")
+            all_passed = False
+        else:
+            print(f"{Fore.GREEN}OK: OPENROUTER_API_KEY is set.")
+
+        # 3. Check git_utils.get_git_diff functionality
+        print("\n3. Checking for staged files (via git_utils)...")
+        staged_files, code = git_utils.run_command(["git", "diff", "--cached", "--name-only"])
+        if code != 0:
+            print(f"{Fore.RED}FAIL: Command 'git diff --cached --name-only' failed.")
+            all_passed = False
+        else:
+            print(f"{Fore.GREEN}OK: Can check for staged files.")
+            if not staged_files.strip():
+                print(f"{Fore.YELLOW}NOTE: No files are currently staged.")
+
+        if all_passed:
+            print(f"\n{Fore.GREEN}{Style.BRIGHT}All self-tests passed!{Style.RESET_ALL}")
+            sys.exit(0)
+        else:
+            print(f"\n{Fore.RED}{Style.BRIGHT}Some self-tests failed.{Style.RESET_ALL}")
+            sys.exit(1)
 
     if args.debug:
         logger.info("Git Auto Commit: generating commit for staged files...")
@@ -105,12 +145,7 @@ def main():
         sys.exit(1)
 
     while True:
-        if args.test:
-            print("(Test mode: simulating API call...)")
-            time.sleep(1)
-            result = ("feat(test): add test flag", "This is a hardcoded test commit message.\n\n- It allows testing the full application flow.\n- Without making a real API call.")
-        else:
-            result = api_client.generate_commit_message(diff, model_info)
+        result = api_client.generate_commit_message(diff, model_info)
         if not result:
             print(f"{Fore.RED}Failed to generate commit message.")
             print(f"{Fore.RED}Try: python3 main.py --test-api")
