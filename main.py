@@ -55,6 +55,31 @@ logger = logging.getLogger(__name__)
 def show_confirmation(commit_msg: str, description: str | None, skip_confirm: bool = False) -> bool:
     """Shows a beautifully formatted commit preview with smart text wrapping"""
     
+    def calculate_optimal_width(content_lines: list[str], min_width: int = 40, padding: int = 4) -> int:
+        """Calculate optimal box width based on content and terminal constraints.
+        Ensures aesthetic proportions and proper padding."""
+        term_width = get_terminal_width()
+        
+        # Calculate maximum content width
+        max_content = max(len(strip_color_codes(line)) for line in content_lines) if content_lines else 0
+        
+        # Add padding for margins and box borders
+        desired_width = max_content + padding
+        
+        # Ensure width is between min_width and terminal width
+        width = max(min_width, desired_width)
+        width = min(width, term_width - 4)  # Leave 2 chars margin on each side
+        
+        # Round up to next multiple of 2 for symmetry
+        return (width + 1) & ~1
+    
+    def strip_color_codes(text: str) -> str:
+        """Remove color codes from string to get true visible length"""
+        for code in [f"{Fore.CYAN}", f"{Fore.GREEN}", f"{Fore.YELLOW}", f"{Fore.BLUE}",
+                    f"{Style.BRIGHT}", f"{Style.RESET_ALL}", f"{Style.DIM}"]:
+            text = text.replace(code, "")
+        return text
+    
     def get_terminal_width():
         """Get terminal width or fallback to safe default"""
         try:
@@ -103,7 +128,7 @@ def show_confirmation(commit_msg: str, description: str | None, skip_confirm: bo
     # We'll add the stats near the command preview at the end
     print()
     
-    # Message box with adaptive width
+    # Prepare message lines
     msg_lines = []
     first_line = True
     for line in commit_msg.split('\n'):
@@ -111,34 +136,30 @@ def show_confirmation(commit_msg: str, description: str | None, skip_confirm: bo
         msg_lines.extend(wrapped)
         first_line = False
     
-    # Calculate optimal width for commit message (shorter for long content)
-    max_len = max(len(line) for line in msg_lines) if msg_lines else 0
-    if len(msg_lines) > 2 or max_len > 50:  # If content is long
-        width = min(max(40, min(max_len + 4, 60)), term_width)  # Limit width for readability
-    else:
-        width = min(max(max_len + 4, 40), term_width)
+    # Calculate optimal width for message box
+    msg_width = calculate_optimal_width(msg_lines)
     
-    # Top border with left-aligned "Message" label
+    # Center offset for boxes
+    center_offset = ' ' * ((term_width - msg_width) // 2)
+    
+    # Message box with consistent width
     label = "Message"
-    label_padding = " " * (4 - len(label) // 2)  # Center the label slightly
-    top_border = f"╭─{label_padding}{label}─{'─' * (width - len(label) - 6)}╮"
+    label_padding = " " * (4 - len(label) // 2)
+    top_border = f"{center_offset}╭─{label_padding}{Fore.CYAN}{label}{Style.RESET_ALL}─{'─' * (msg_width - len(label) - 6)}╮"
     print(f"{Style.BRIGHT}{top_border}{Style.RESET_ALL}")
     
     # Content lines with proper padding
     for line in msg_lines:
-        padded_line = line.ljust(width - 2)
-        print(f"{Style.BRIGHT}│{padded_line}│{Style.RESET_ALL}")
+        visible_len = len(strip_color_codes(line))
+        padding = " " * (msg_width - 2 - visible_len)
+        print(f"{Style.BRIGHT}{center_offset}│ {line}{padding}│{Style.RESET_ALL}")
     
     # Bottom border
-    print(f"{Style.BRIGHT}╰{'─' * (width - 2)}╯{Style.RESET_ALL}")
+    print(f"{Style.BRIGHT}{center_offset}╰{'─' * (msg_width - 2)}╯{Style.RESET_ALL}")
     
-    # Description box if present - label on left side of border with structured content
+    # Description box if present
     if description:
-        # Add elegant separator between message and description
-        separator_width = min(50, term_width - 10)  # Keep separator reasonable
-        half_sep = (separator_width - 3) // 2  # -3 for the center dot
-        print(f"\n{' ' * ((term_width - separator_width) // 2)}"
-              f"{Style.DIM}{'─' * half_sep}●{'─' * half_sep}{Style.RESET_ALL}\n")
+        print("\n")  # Add extra line for better visual separation
         desc_lines = []
         
         # Structure description into sections
@@ -180,25 +201,27 @@ def show_confirmation(commit_msg: str, description: str | None, skip_confirm: bo
                 text = text.replace(code, "")
             return text
             
-        # Calculate optimal width based on visible content length
-        max_len = max(len(strip_color_codes(line)) for line in desc_lines) if desc_lines else 0
-        width = min(max(max_len + 6, 45), term_width - 4)  # Add more padding, min 45 chars
+        # Calculate optimal width for description box
+        desc_width = calculate_optimal_width(desc_lines, padding=6)  # Extra padding for bullets
         
-        # Top border with centered "Description" label and accent color
+        # Use same center offset for alignment
+        center_offset = ' ' * ((term_width - desc_width) // 2)
+        
+        # Top border with matching style
         label = "Description"
         label_padding = " " * (4 - len(label) // 2)
-        top_border = f"╭─{label_padding}{Fore.CYAN}{label}{Style.RESET_ALL}─{'─' * (width - len(label) - 6)}╮"
+        top_border = f"{center_offset}╭─{label_padding}{Fore.CYAN}{label}{Style.RESET_ALL}─{'─' * (desc_width - len(label) - 6)}╮"
         print(f"{Style.BRIGHT}{top_border}{Style.RESET_ALL}")
         
         # Content lines with proper padding and color preservation
         for line in desc_lines:
             # Calculate correct padding based on visible length
             visible_len = len(strip_color_codes(line))
-            padding = " " * (width - 2 - visible_len)
-            print(f"{Style.BRIGHT}│ {line}{padding}│{Style.RESET_ALL}")
+            padding = " " * (desc_width - 2 - visible_len)
+            print(f"{Style.BRIGHT}{center_offset}│ {line}{padding}│{Style.RESET_ALL}")
         
         # Bottom border
-        print(f"{Style.BRIGHT}╰{'─' * (width - 2)}╯{Style.RESET_ALL}")
+        print(f"{Style.BRIGHT}{center_offset}╰{'─' * (desc_width - 2)}╯{Style.RESET_ALL}")
     
     # Show command preview and stats
     preview_width = min(term_width - 4, 100)  # Keep reasonable width with margin
