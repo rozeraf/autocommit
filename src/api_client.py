@@ -22,8 +22,24 @@ import os
 from typing import Optional
 
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util import Retry
 
 logger = logging.getLogger(__name__)
+
+
+def _get_session() -> requests.Session:
+    """Creates a requests session with retry logic."""
+    session = requests.Session()
+    retry = Retry(
+        total=3,
+        backoff_factor=1,
+        status_forcelist=[429, 500, 502, 503, 504],
+    )
+    adapter = HTTPAdapter(max_retries=retry)
+    session.mount("https://", adapter)
+    session.mount("http://", adapter)
+    return session
 
 
 def get_model_info(model_name: str) -> dict | None:
@@ -31,19 +47,18 @@ def get_model_info(model_name: str) -> dict | None:
     api_url = "https://openrouter.ai/api/v1/models"
     logger.debug("Getting model information...")
     try:
-        response = requests.get(api_url, timeout=15)
-        if response.status_code != 200:
-            logger.error(f"Failed to get model list (status: {response.status_code})")
-            return None
-        
+        session = _get_session()
+        response = session.get(api_url, timeout=15)
+        response.raise_for_status()
+
         data = response.json()
         models_data = data.get("data", [])
-        
+
         for model in models_data:
             if model.get("id") == model_name:
                 logger.debug(f"Model information for {model_name} received.")
                 return model
-        
+
         logger.warning(f"Model '{model_name}' not found.")
         return None
     except requests.exceptions.RequestException as e:
@@ -66,16 +81,16 @@ def generate_commit_message(diff: str, model_info: dict | None) -> tuple[str, st
     api_key = os.getenv("OPENROUTER_API_KEY")
     api_url = os.getenv("OPENROUTER_API_URL", "https://openrouter.ai/api/v1/chat/completions")
     model = os.getenv("OPENROUTER_MODEL", "anthropic/claude-3.5-sonnet")
-    
+
     if not api_key:
         logger.error("Error: OPENROUTER_API_KEY is not set in the .env file.")
         logger.error("Create a .env file with OPENROUTER_API_KEY=your_key")
         return None
-    
+
     logger.debug(f"Using API key: {api_key[:8]}...")
     logger.debug(f"URL: {api_url}")
     logger.debug(f"Model: {model}")
-    
+
     context_length = None
     if model_info and "context_length" in model_info:
         context_length = int(model_info["context_length"])
@@ -85,14 +100,14 @@ def generate_commit_message(diff: str, model_info: dict | None) -> tuple[str, st
 
     from . import git_utils
     smart_diff = git_utils.get_smart_diff(diff, context_length)
-    
+
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
         "HTTP-Referer": "https://github.com/rozeraf/git-auto-commit",
         "X-Title": "Git Auto Commit"
     }
-    
+
     system_prompt = """Your task is to generate a commit message based on the provided diff, following the Conventional Commits specification.
 
 RULES:
@@ -127,39 +142,32 @@ RULES:
                 "content": f"Create a commit message for these changes:\n{smart_diff}"
             }
         ],
-        "max_tokens": 250, 
+        "max_tokens": 250,
         "temperature": 0.4
     }
-    
+
     try:
         logger.debug("Generating commit message...")
         logger.debug("Sending request to API...")
-        
-        response = requests.post(
+
+        session = _get_session()
+        response = session.post(
             api_url,
             headers=headers,
             json=payload,
             timeout=45
         )
-        
+
         logger.debug(f"Response status: {response.status_code}")
-        
-        if response.status_code != 200:
-            logger.error(f"API Error: {response.status_code}")
-            try:
-                error_data = response.json()
-                logger.error(f"Error details: {error_data}")
-            except json.JSONDecodeError:
-                logger.error(f"Response body: {response.text}")
-            return None
+        response.raise_for_status()
 
         response_text = response.text.strip()
         if not response_text:
             logger.error("Empty response from API")
             return None
-            
+
         logger.debug(f"Received response ({len(response_text)} characters)")
-        
+
         try:
             data = response.json()
         except json.JSONDecodeError as e:
@@ -179,13 +187,16 @@ RULES:
 
         ai_response = data["choices"][0]["message"]["content"].strip()
         logger.debug(f"AI Response:\n{ai_response}")
-        
+
         return parse_ai_response(ai_response)
-    except requests.exceptions.Timeout:
-        logger.error("Request timeout (45s). Please try again.")
-        return None
-    except requests.exceptions.ConnectionError:
-        logger.error("API connection error. Check your internet connection.")
+    except requests.exceptions.RequestException as e:
+        logger.error(f"API request failed: {e}")
+        if e.response is not None:
+            try:
+                error_data = e.response.json()
+                logger.error(f"Error details: {error_data}")
+            except json.JSONDecodeError:
+                logger.error(f"Response body: {e.response.text}")
         return None
     except KeyboardInterrupt:
         logger.info("\nRequest cancelled by user")
@@ -202,7 +213,7 @@ def test_api_key() -> bool:
     api_key = os.getenv("OPENROUTER_API_KEY")
     api_url = os.getenv("OPENROUTER_API_URL", "https://openrouter.ai/api/v1/chat/completions")
     model = os.getenv("OPENROUTER_MODEL", "anthropic/claude-3.5-sonnet")
-    
+
     if not api_key:
         logger.error("Error: OPENROUTER_API_KEY is not set in the .env file.")
         return False
@@ -211,32 +222,33 @@ def test_api_key() -> bool:
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json"
     }
-    
+
     payload = {
         "model": model,
         "messages": [{"role": "user", "content": "Hello"}],
         "max_tokens": 10
     }
-    
+
     try:
         logger.info("Testing API key...")
         logger.debug(f"URL: {api_url}")
         logger.debug(f"Model: {model}")
-        
-        response = requests.post(
+
+        session = _get_session()
+        response = session.post(
             api_url,
             headers=headers,
             json=payload,
             timeout=30
         )
-        
+
+        response.raise_for_status()
+
         logger.debug(f"Status: {response.status_code}")
-        if response.status_code == 200:
-            logger.info("API key is working!")
-            return True
-        else:
-            logger.error(f"Problem with API key: {response.text}")
-            return False
-    except Exception as e:
-        logger.error(f"Testing error: {e}")
+        logger.info("API key is working!")
+        return True
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Problem with API key or connection: {e}")
+        if e.response is not None:
+            logger.error(f"Response: {e.response.text}")
         return False

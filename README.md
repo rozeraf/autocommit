@@ -64,6 +64,7 @@ poetry run python main.py --test-api
 
 - Analyzes Git changes for meaningful commit messages
 - Integrates with OpenRouter AI models
+- Robust API communication with automatic retries
 - Secure Git operations without shell injection
 - CLI-friendly interface
 
