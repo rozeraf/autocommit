@@ -51,3 +51,44 @@ def test_parse_ai_response_whitespace_input():
     subject, description = parse_ai_response(message)
     assert subject == ""
     assert description is None
+
+def test_parse_ai_response_with_mermaid():
+    """Tests parsing response with mermaid diagram."""
+    message = """```mermaid
+graph TD
+    A --> B
+```
+Looking at the diff, this represents initial setup.
+
+feat: initial project setup
+
+This is the project initialization."""
+    subject, description = parse_ai_response(message)
+    assert subject == "feat: initial project setup"
+    assert description == "This is the project initialization."
+
+def test_parse_ai_response_with_markdown():
+    """Tests parsing response with markdown formatting."""
+    message = """**feat**(api): **add** new endpoint
+
+This is a *description* with `code` and **bold** text."""
+    subject, description = parse_ai_response(message)
+    assert subject == "feat(api): add new endpoint"
+    assert description == "This is a description with code and bold text."
+
+def test_parse_ai_response_complex_cleanup():
+    """Tests complex cleanup scenarios."""
+    message = """## Analysis
+
+Looking at the diff, this represents:
+
+### Changes
+- **feat**: new feature
+- **fix**: bug resolution
+
+**chore**(setup): initial configuration
+
+Setup project structure and dependencies."""
+    subject, description = parse_ai_response(message)
+    assert subject == "chore(setup): initial configuration"
+    assert description == "Setup project structure and dependencies."

@@ -168,6 +168,11 @@ def main():
         result = api_client.generate_commit_message(diff, model_info)
         if result:
             spinner.succeed("✓ Commit message generated.")
+            commit_msg, description = result
+            if args.debug:
+                logger.debug(f"Parsed commit message: '{commit_msg}'")
+                if description:
+                    logger.debug(f"Parsed description: '{description[:100]}...'")
         else:
             spinner.fail("✗ Failed to generate commit message.")
 

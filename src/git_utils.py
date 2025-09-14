@@ -113,14 +113,20 @@ def get_git_diff() -> str | None:
 
 def commit_changes(message: str, description: str | None = None) -> bool:
     """Creates a commit with the specified message"""
-    full_message = message
-    if description:
-        full_message = f"{message}\n\n{description}"
-    
     logger.debug("\nCreating commit...")
     
+    # Use subject as main message, description as body
+    if description:
+        # Git commit format: subject on first line, body after blank line
+        full_message = f"{message}\n\n{description}"
+    else:
+        full_message = message
+    
+    logger.debug(f"Commit subject: {message}")
+    if description:
+        logger.debug(f"Commit body: {description[:100]}...")
+    
     # Use show_output=True to see git hooks output, and longer timeout for commit operations
-    # Pass message as separate argument to avoid shell escaping issues
     _, code = run_command(
         ["git", "commit", "-m", full_message], 
         show_output=True, 
@@ -128,9 +134,10 @@ def commit_changes(message: str, description: str | None = None) -> bool:
     )
     
     if code == 0:
+        logger.info("Commit created successfully")
         return True
     else:
-        logger.error(f"Error creating commit (code: {code})")
+        logger.error(f"Error creating commit (exit code: {code})")
         return False
 
 

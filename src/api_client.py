@@ -67,12 +67,91 @@ def get_model_info(model_name: str) -> dict | None:
 
 
 def parse_ai_response(full_message: str) -> tuple[str, str | None]:
-    """Splits the full commit message into a subject and description."""
-    lines = full_message.strip().split("\n", 1)
-    commit_msg = lines[0].strip()
+    """Splits the full commit message into a subject and description.
+    
+    Cleans up markdown formatting and extracts the actual commit message.
+    """
+    # Clean up common markdown patterns
+    cleaned_message = full_message.strip()
+    
+    # Remove mermaid code blocks more thoroughly
+    while '```mermaid' in cleaned_message:
+        start_idx = cleaned_message.find('```mermaid')
+        if start_idx == -1:
+            break
+        end_idx = cleaned_message.find('```', start_idx + 3)
+        if end_idx != -1:
+            cleaned_message = cleaned_message[:start_idx].strip() + cleaned_message[end_idx + 3:].strip()
+        else:
+            # If no closing ```, remove from start_idx to end
+            cleaned_message = cleaned_message[:start_idx].strip()
+    
+    # Remove other code blocks more robustly
+    while '```' in cleaned_message:
+        start_idx = cleaned_message.find('```')
+        if start_idx == -1:
+            break
+        end_idx = cleaned_message.find('```', start_idx + 3)
+        if end_idx != -1:
+            cleaned_message = cleaned_message[:start_idx].strip() + cleaned_message[end_idx + 3:].strip()
+        else:
+            cleaned_message = cleaned_message[:start_idx].strip()
+    
+    # Remove common AI response patterns more comprehensively
+    unwanted_patterns = [
+        r'Looking at the diff, this represents.*?(?=\n|$)',
+        r'This is.*?(?=\n|$)',
+        r'Based on the changes.*?(?=\n|$)',
+        r'The changes include.*?(?=\n|$)',
+        r'### Analysis.*?(?=\n\n)',
+        r'## Summary.*?(?=\n\n)',
+        r'- \*\*Core project files\*\*.*?(?=\n\n|\Z)',
+        r'- \*\*Configuration files\*\*.*?(?=\n\n|\Z)',
+        r'- \*\*Documentation\*\*.*?(?=\n\n|\Z)',
+        r'- \*\*Dependencies\*\*.*?(?=\n\n|\Z)',
+        r'graph TD.*?(?=\n\n|\Z)',
+        r'\n{2,}',  # Multiple newlines
+    ]
+    
+    import re
+    for pattern in unwanted_patterns:
+        cleaned_message = re.sub(pattern, '', cleaned_message, flags=re.IGNORECASE | re.DOTALL)
+        cleaned_message = re.sub(r'\n\s*\n', '\n\n', cleaned_message)  # Clean up extra newlines
+    
+    # Remove extra whitespace and markdown artifacts more aggressively
+    cleaned_message = re.sub(r'\*\*(.*?)\*\*', r'\1', cleaned_message)  # Remove **bold**
+    cleaned_message = re.sub(r'\*(.*?)\*', r'\1', cleaned_message)  # Remove *italic*
+    cleaned_message = re.sub(r'`(.*?)`', r'\1', cleaned_message)  # Remove `code`
+    cleaned_message = re.sub(r'#{1,6}\s*', '', cleaned_message)  # Remove headers
+    cleaned_message = re.sub(r'[-*]\s*\*?\*?[A-Za-z ]+\*?\*?:', '', cleaned_message)  # Remove bullet points with bold
+    
+    # Strip leading/trailing whitespace
+    cleaned_message = cleaned_message.strip()
+    
+    # Now parse the cleaned message
+    lines = cleaned_message.split('\n', 1)
+    commit_msg = lines[0].strip() if lines else ""
+    
     description = None
     if len(lines) > 1 and lines[1].strip():
         description = lines[1].strip()
+    
+    # Ensure commit message looks like conventional commit
+    if not commit_msg or ':' not in commit_msg:
+        # If parsing failed, try to extract first meaningful line that looks like a commit
+        meaningful_lines = [line.strip() for line in cleaned_message.split('\n') if line.strip() and ':' in line and not line.startswith(('-', '*'))]
+        if meaningful_lines:
+            commit_msg = meaningful_lines[0]
+            # Remove the commit_msg from the rest to get description
+            rest = cleaned_message.replace(commit_msg, '').strip()
+            if rest:
+                description = rest
+    
+    # Clean up description bullets and extra text
+    if description:
+        description = re.sub(r'^[-*]\s*', '', description, flags=re.MULTILINE)
+        description = description.strip()
+    
     return commit_msg, description
 
 
