@@ -21,6 +21,7 @@ import argparse
 import logging
 import os
 import sys
+import time
 from typing import Optional
 
 from colorama import Fore, Style
@@ -75,6 +76,7 @@ def main():
     parser.add_argument("-y", "--yes", action="store_true", help="Skip confirmation")
     parser.add_argument("--dry-run", action="store_true", help="Generate and print commit message without committing")
     parser.add_argument("--test-api", action="store_true", help="Test API connection")
+    parser.add_argument("--test", action="store_true", help="Run with a mock commit message to test the flow without calling the API")
     parser.add_argument("--model", help="Override AI model from .env file (e.g., anthropic/claude-3.5-sonnet)")
     args = parser.parse_args()
 
@@ -103,7 +105,12 @@ def main():
         sys.exit(1)
 
     while True:
-        result = api_client.generate_commit_message(diff, model_info)
+        if args.test:
+            print("(Test mode: simulating API call...)")
+            time.sleep(1)
+            result = ("feat(test): add test flag", "This is a hardcoded test commit message.\n\n- It allows testing the full application flow.\n- Without making a real API call.")
+        else:
+            result = api_client.generate_commit_message(diff, model_info)
         if not result:
             print(f"{Fore.RED}Failed to generate commit message.")
             print(f"{Fore.RED}Try: python3 main.py --test-api")
