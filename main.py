@@ -119,6 +119,15 @@ def main():
             if not staged_files.strip():
                 print(f"{Fore.YELLOW}NOTE: No files are currently staged.")
 
+        # 4. Run unit tests
+        print("\n4. Running unit tests with pytest...")
+        _, code = git_utils.run_command(["poetry", "run", "pytest"], show_output=True)
+        if code != 0:
+            print(f"{Fore.RED}FAIL: Unit test suite failed.{Style.RESET_ALL}")
+            all_passed = False
+        else:
+            print(f"{Fore.GREEN}OK: Unit test suite passed.{Style.RESET_ALL}")
+
         if all_passed:
             print(f"\n{Fore.GREEN}{Style.BRIGHT}All self-tests passed!{Style.RESET_ALL}")
             sys.exit(0)
