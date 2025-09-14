@@ -70,8 +70,28 @@ def parse_ai_response(full_message: str) -> tuple[str, str | None]:
     """Splits the full commit message into a subject and description.
     
     Cleans up markdown formatting and extracts the actual commit message.
-    For long changes, prioritizes a concise subject line and detailed description.
+    Ensures the subject line is concise (max 50-70 chars) with details in description.
     """
+    import re
+    
+    def split_on_dash(text: str) -> tuple[str, str | None]:
+        """Split text on first dash that follows the commit type and scope"""
+        # Find the first colon (after type and scope)
+        colon_idx = text.find(':')
+        if colon_idx == -1:
+            return text, None
+            
+        # Look for dash after the colon
+        after_colon = text[colon_idx + 1:]
+        dash_idx = after_colon.find('-')
+        if dash_idx == -1:
+            return text, None
+            
+        # Split at the dash
+        subject = text[:colon_idx + 1 + dash_idx].strip()
+        details = text[colon_idx + 1 + dash_idx + 1:].strip()
+        return subject, details
+    
     # Clean up common markdown patterns
     cleaned_message = full_message.strip()
     
@@ -131,22 +151,37 @@ def parse_ai_response(full_message: str) -> tuple[str, str | None]:
     
     # Now parse the cleaned message
     lines = cleaned_message.split('\n', 1)
-    commit_msg = lines[0].strip() if lines else ""
+    first_line = lines[0].strip() if lines else ""
+    extra_lines = lines[1].strip() if len(lines) > 1 else ""
     
-    description = None
-    if len(lines) > 1 and lines[1].strip():
-        description = lines[1].strip()
+    # Process the first line to ensure it's a concise conventional commit
+    commit_msg = first_line
+    if first_line and ':' in first_line:
+        # If the first line contains details after a dash, move them to description
+        subject, details = split_on_dash(first_line)
+        if details:
+            commit_msg = subject
+            extra_lines = (details + "\n" + extra_lines) if extra_lines else details
     
-    # Ensure commit message looks like conventional commit
-    if not commit_msg or ':' not in commit_msg:
-        # If parsing failed, try to extract first meaningful line that looks like a commit
-        meaningful_lines = [line.strip() for line in cleaned_message.split('\n') if line.strip() and ':' in line and not line.startswith(('-', '*'))]
-        if meaningful_lines:
-            commit_msg = meaningful_lines[0]
-            # Remove the commit_msg from the rest to get description
-            rest = cleaned_message.replace(commit_msg, '').strip()
-            if rest:
-                description = rest
+    # If the message is still too long, try to make it more concise
+    if len(commit_msg) > 70 and ':' in commit_msg:
+        # Keep only up to the first logical break after type(scope):
+        parts = commit_msg.split(':', 1)
+        header = parts[0] + ':'  # type(scope):
+        content = parts[1].strip()
+        
+        # Find a good break point
+        break_points = ['. ', ', ', ' - ', ' and ', ' with ']
+        for point in break_points:
+            idx = content.find(point)
+            if idx > 0 and idx < 50:  # Found a break point in reasonable range
+                commit_msg = header + ' ' + content[:idx]
+                remaining = content[idx + len(point):].strip()
+                if remaining:
+                    extra_lines = (remaining + "\n" + extra_lines) if extra_lines else remaining
+                break
+    
+    description = extra_lines if extra_lines else None
     
     # Clean up description bullets and extra text
     if description:
@@ -194,7 +229,8 @@ RULES:
 1. The output must be ONLY the commit message text, without any extra words or explanations.
 2. The message must be in English.
 3. The format is: `type(scope): subject`
-    - Followed by an optional longer body.
+    - Subject line MUST be concise (max 50-70 chars)
+    - Followed by an optional longer body for details
     - Followed by an optional `BREAKING CHANGE:` footer.
 4. Use the following types:
     - `feat`: A new feature.
@@ -208,7 +244,14 @@ RULES:
     - `ci`: Changes to CI configuration files and scripts.
     - `chore`: Other changes that don't modify src or test files.
     - `revert`: Reverts a previous commit.
-5. The body, if present, should have a header, a list of changes starting with `-`, and an optional footer."""
+5. Keep the subject line VERY SHORT and move details to the body:
+    Bad:  feat(ui): add new button component with custom styles and hover effects
+    Good: feat(ui): add new button component
+          
+          - Implemented custom styling system
+          - Added hover effect animations
+          - Updated component documentation
+6. The body should be structured with bullet points (-) and clear sections."""
 
     payload = {
         "model": model,
