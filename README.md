@@ -53,6 +53,9 @@ poetry run python main.py
 # Skip confirmation prompt
 poetry run python main.py -y
 
+# Generate message without committing (dry run)
+poetry run python main.py --dry-run
+
 # Use a specific model
 poetry run python main.py --model anthropic/claude-3.5-sonnet
 

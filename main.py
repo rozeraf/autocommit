@@ -68,6 +68,7 @@ def main():
     parser = argparse.ArgumentParser(description="Git Auto Commit - AI-powered commit message generation")
     parser.add_argument("-d", "--debug", action="store_true", help="Enable debug logging")
     parser.add_argument("-y", "--yes", action="store_true", help="Skip confirmation")
+    parser.add_argument("--dry-run", action="store_true", help="Generate and print commit message without committing")
     parser.add_argument("--test-api", action="store_true", help="Test API connection")
     parser.add_argument("--model", help="Override AI model from .env file (e.g., anthropic/claude-3.5-sonnet)")
     args = parser.parse_args()
@@ -103,6 +104,14 @@ def main():
         sys.exit(1)
     
     commit_msg, description = result
+
+    if args.dry_run:
+        logger.info("\n--- Dry Run: Commit Message ---")
+        logger.info(f"Message: {commit_msg}")
+        if description:
+            logger.info(f"Description:\n{description}")
+        logger.info("---------------------------------")
+        sys.exit(0)
 
     if show_confirmation(commit_msg, description, args.yes):
         success = git_utils.commit_changes(commit_msg, description)
