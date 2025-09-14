@@ -97,31 +97,38 @@ def main():
     if not diff:
         sys.exit(1)
     
-    result = api_client.generate_commit_message(diff, model_info)
-    if not result:
-        logger.error("Failed to generate commit message.")
-        logger.error("Try: python3 main.py --test-api")
-        sys.exit(1)
-    
-    commit_msg, description = result
-
-    if args.dry_run:
-        logger.info("\n--- Dry Run: Commit Message ---")
-        logger.info(f"Message: {commit_msg}")
-        if description:
-            logger.info(f"Description:\n{description}")
-        logger.info("---------------------------------")
-        sys.exit(0)
-
-    if show_confirmation(commit_msg, description, args.yes):
-        success = git_utils.commit_changes(commit_msg, description)
-        if success:
-            logger.info("Done!")
-        else:
+    while True:
+        result = api_client.generate_commit_message(diff, model_info)
+        if not result:
+            logger.error("Failed to generate commit message.")
+            logger.error("Try: python3 main.py --test-api")
             sys.exit(1)
-    else:
-        logger.info("Commit cancelled.")
-        sys.exit(1)
+
+        commit_msg, description = result
+
+        if args.dry_run:
+            logger.info("\n--- Dry Run: Commit Message ---")
+            logger.info(f"Message: {commit_msg}")
+            if description:
+                logger.info(f"Description:\n{description}")
+            logger.info("---------------------------------")
+            sys.exit(0)
+
+        if show_confirmation(commit_msg, description, args.yes):
+            success = git_utils.commit_changes(commit_msg, description)
+            if success:
+                logger.info("Done!")
+            else:
+                sys.exit(1)
+            break
+        else:
+            retry_input = input("Retry generating commit message? [y/N]: ").lower()
+            if retry_input in ("y", "yes"):
+                logger.info("Regenerating commit message...")
+                continue
+            else:
+                logger.info("Commit cancelled.")
+                sys.exit(0)
 
 
 if __name__ == "__main__":
