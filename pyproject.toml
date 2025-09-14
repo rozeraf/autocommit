@@ -27,6 +27,7 @@ classifiers = [
 python = "^3.11.13"
 requests = "^2.31.0"
 python-dotenv = "^1.0.0"
+colorama = "^0.4.6"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.1.0"
@@ -47,7 +48,7 @@ target-version = "py311"
 
 [tool.ruff.lint]
 extend-select = ["E", "F", "I", "UP", "B", "Q", "T20"]
-ignore = ["E501", "F401", "F841", "B008"]
+ignore = ["E501", "F401", "F841", "B008", "T201"]
 
 [tool.ruff.format]
 quote-style = "double"
