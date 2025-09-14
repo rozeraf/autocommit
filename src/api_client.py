@@ -70,6 +70,7 @@ def parse_ai_response(full_message: str) -> tuple[str, str | None]:
     """Splits the full commit message into a subject and description.
     
     Cleans up markdown formatting and extracts the actual commit message.
+    For long changes, prioritizes a concise subject line and detailed description.
     """
     # Clean up common markdown patterns
     cleaned_message = full_message.strip()
