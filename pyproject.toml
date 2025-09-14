@@ -1,11 +1,11 @@
 [tool.poetry]
-name = "git-autocommit"
+name = "autocommit"
 version = "1.0.0"
 description = "Automatic git commit message generation using AI"
-authors = ["Rafael Rozer <your-email@example.com>"]
+authors = ["rozeraf <rafabduloff@gmail.com>"]
 license = "GPL-3.0-only"
 readme = "README.md"
-repository = "https://github.com/rozeraf/git-auto-commit"
+repository = "https://github.com/rozeraf/autocommit"
 packages = [
     { include = "src", from = "." }
 ]
@@ -28,6 +28,7 @@ python = "^3.11.13"
 requests = "^2.31.0"
 python-dotenv = "^1.0.0"
 colorama = "^0.4.6"
+halo = "^0.0.31"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.1.0"
@@ -101,3 +102,6 @@ module = [
     "subprocess.*",
 ]
 ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+pythonpath = ["."]

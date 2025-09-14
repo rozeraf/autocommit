@@ -215,6 +215,28 @@ files = [
 toml = ["tomli ; python_full_version <= \"3.11.0a6\""]
 
 [[package]]
+name = "halo"
+version = "0.0.31"
+description = "Beautiful terminal spinners in Python"
+optional = false
+python-versions = ">=3.4"
+groups = ["main"]
+files = [
+    {file = "halo-0.0.31-py2-none-any.whl", hash = "sha256:5350488fb7d2aa7c31a1344120cee67a872901ce8858f60da7946cef96c208ab"},
+    {file = "halo-0.0.31.tar.gz", hash = "sha256:7b67a3521ee91d53b7152d4ee3452811e1d2a6321975137762eb3d70063cc9d6"},
+]
+
+[package.dependencies]
+colorama = ">=0.3.9"
+log-symbols = ">=0.0.14"
+six = ">=1.12.0"
+spinners = ">=0.0.24"
+termcolor = ">=1.1.0"
+
+[package.extras]
+ipython = ["IPython (==5.7.0)", "ipywidgets (==7.1.0)"]
+
+[[package]]
 name = "idna"
 version = "3.10"
 description = "Internationalized Domain Names in Applications (IDNA)"
@@ -240,6 +262,21 @@ files = [
     {file = "iniconfig-2.1.0-py3-none-any.whl", hash = "sha256:9deba5723312380e77435581c6bf4935c94cbfab9b1ed33ef8d238ea168eb760"},
     {file = "iniconfig-2.1.0.tar.gz", hash = "sha256:3abbd2e30b36733fee78f9c7f7308f2d0050e88f0087fd25c2645f63c773e1c7"},
 ]
+
+[[package]]
+name = "log-symbols"
+version = "0.0.14"
+description = "Colored symbols for various log levels for Python"
+optional = false
+python-versions = "*"
+groups = ["main"]
+files = [
+    {file = "log_symbols-0.0.14-py3-none-any.whl", hash = "sha256:4952106ff8b605ab7d5081dd2c7e6ca7374584eff7086f499c06edd1ce56dcca"},
+    {file = "log_symbols-0.0.14.tar.gz", hash = "sha256:cf0bbc6fe1a8e53f0d174a716bc625c4f87043cc21eb55dd8a740cfe22680556"},
+]
+
+[package.dependencies]
+colorama = ">=0.3.9"
 
 [[package]]
 name = "packaging"
@@ -374,6 +411,45 @@ files = [
 ]
 
 [[package]]
+name = "six"
+version = "1.17.0"
+description = "Python 2 and 3 compatibility utilities"
+optional = false
+python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,>=2.7"
+groups = ["main"]
+files = [
+    {file = "six-1.17.0-py2.py3-none-any.whl", hash = "sha256:4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274"},
+    {file = "six-1.17.0.tar.gz", hash = "sha256:ff70335d468e7eb6ec65b95b99d3a2836546063f63acc5171de367e834932a81"},
+]
+
+[[package]]
+name = "spinners"
+version = "0.0.24"
+description = "Spinners for terminals"
+optional = false
+python-versions = "*"
+groups = ["main"]
+files = [
+    {file = "spinners-0.0.24-py3-none-any.whl", hash = "sha256:2fa30d0b72c9650ad12bbe031c9943b8d441e41b4f5602b0ec977a19f3290e98"},
+    {file = "spinners-0.0.24.tar.gz", hash = "sha256:1eb6aeb4781d72ab42ed8a01dcf20f3002bf50740d7154d12fb8c9769bf9e27f"},
+]
+
+[[package]]
+name = "termcolor"
+version = "3.1.0"
+description = "ANSI color formatting for output in terminal"
+optional = false
+python-versions = ">=3.9"
+groups = ["main"]
+files = [
+    {file = "termcolor-3.1.0-py3-none-any.whl", hash = "sha256:591dd26b5c2ce03b9e43f391264626557873ce1d379019786f99b0c2bee140aa"},
+    {file = "termcolor-3.1.0.tar.gz", hash = "sha256:6a6dd7fbee581909eeec6a756cff1d7f7c376063b14e4a298dc4980309e55970"},
+]
+
+[package.extras]
+tests = ["pytest", "pytest-cov"]
+
+[[package]]
 name = "urllib3"
 version = "2.5.0"
 description = "HTTP library with thread-safe connection pooling, file post, and more."
@@ -394,4 +470,4 @@ zstd = ["zstandard (>=0.18.0)"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.11.13"
-content-hash = "3ad190c02a4e7beffe29d06f1b2e51ff3aae7d4572373a73fee54aea8dba55ad"
+content-hash = "cdc5fbb8811710b7f7fd80bf4721a0d76a4d8669b579d548a9de4c7fa9672e74"

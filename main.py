@@ -27,6 +27,7 @@ from typing import Optional
 from colorama import Fore, Style
 from colorama import init as colorama_init
 from dotenv import load_dotenv
+from halo import Halo
 
 from src import api_client, git_utils
 
@@ -147,23 +148,37 @@ def main():
     model_name = args.model or os.getenv("OPENROUTER_MODEL", "anthropic/claude-3.5-sonnet")
     if args.debug:
         logger.debug(f"Using model: {model_name}")
+
+    spinner = Halo(text=f"Fetching info for model '{model_name}'...", spinner="dots")
+    spinner.start()
     model_info = api_client.get_model_info(model_name)
+    if model_info:
+        spinner.succeed("Model info fetched.")
+    else:
+        spinner.fail("Failed to fetch model info.")
+        sys.exit(1)
 
     diff = git_utils.get_git_diff()
     if not diff:
         sys.exit(1)
 
     while True:
+        spinner = Halo(text="Generating commit message with AI...", spinner="dots")
+        spinner.start()
         result = api_client.generate_commit_message(diff, model_info)
+        if result:
+            spinner.succeed("Commit message generated.")
+        else:
+            spinner.fail("Failed to generate commit message.")
+
         if not result:
-            print(f"{Fore.RED}Failed to generate commit message.")
             print(f"{Fore.RED}Try: python3 main.py --test-api")
             sys.exit(1)
 
         commit_msg, description = result
 
         if args.dry_run:
-            print(f"\n{Style.BRIGHT}--- Dry Run: Commit Message ---{Style.RESET_ALL}")
+            print(f"\n{Style.BRIGHT}--- Dry Run: Commit Message ---")
             print(f"{Fore.YELLOW}Message:{Style.RESET_ALL} {Fore.GREEN}{commit_msg}")
             if description:
                 print(f"{Fore.YELLOW}Description:{Style.RESET_ALL}\n{Fore.CYAN}{description}")
