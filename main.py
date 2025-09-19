@@ -185,21 +185,24 @@ def main():
                     ui.show_info(f"Description:\n{description}")
                 sys.exit(0)
 
-            if ui.show_confirmation(commit_msg, description, args.yes):
+            confirmation = ui.show_confirmation(commit_msg, description, args.yes)
+            
+            if confirmation is True:
+                # User confirmed - create commit
                 success = git_utils.commit_changes(commit_msg, description)
                 if success:
                     ui.show_success("Done!")
                 else:
                     sys.exit(1)
                 break
+            elif confirmation is None:
+                # User wants to regenerate - continue loop
+                ui.show_info("Regenerating commit message...")
+                continue
             else:
-                retry_input = input("Retry generating commit message? [y/N]: ").lower()
-                if retry_input in ("y", "yes"):
-                    ui.show_info("Regenerating commit message...")
-                    continue
-                else:
-                    ui.show_info("Commit cancelled.")
-                    sys.exit(0)
+                # User declined - exit
+                ui.show_info("Commit cancelled.")
+                sys.exit(0)
 
 
 if __name__ == "__main__":
