@@ -1,8 +1,20 @@
 # Git Auto Commit
 
-Automatic git commit message generation using AI via OpenRouter API.
+Automatic git commit message generation using AI via OpenRouter API with beautiful terminal interface and comprehensive testing.
 
-## 🚀 Quick Start
+## Features
+
+- **AI-Powered**: Uses OpenRouter API with multiple model support
+- **Beautiful UI**: Rich terminal interface with colored output and styled boxes
+- **Smart Parsing**: Robust commit message parsing with markdown cleanup
+- **Interactive**: Preview, confirm, or regenerate commit messages
+- **Self-Testing**: Built-in health checks and comprehensive test suite
+- **Responsive**: Terminal-adaptive layouts with optimal sizing
+- **Secure**: Safe git operations without shell injection
+- **Fast**: Loading spinners and progress indicators
+- **Conventional Commits**: Enforces best practices for commit messages
+
+## Quick Start
 
 ### 1. Setup Environment
 
@@ -57,53 +69,132 @@ python3 main.py --dry-run
 # Use a specific model
 python3 main.py --model anthropic/claude-3.5-sonnet
 
-# Test API
+# Test API connection
 python3 main.py --test-api
+
+# Run comprehensive self-tests
+python3 main.py --test
+
+# Enable debug logging
+python3 main.py --debug
 ```
 
-## 🛠️ Features
+## What's New
 
-- Analyzes Git changes for meaningful commit messages
-- Integrates with OpenRouter AI models
-- Robust API communication with automatic retries
-- Secure Git operations without shell injection
-- CLI-friendly interface
+This project has undergone significant improvements with the latest v2.0 release:
 
-## 📦 Dependencies
+- **Rich Terminal Interface**: Beautiful UI with styled boxes, colors, and interactive prompts
+- **Comprehensive Testing**: Full test suite with automated health checks
+- **Enhanced AI Parsing**: Smart commit message extraction from complex AI responses
+- **Loading Indicators**: Progress feedback with spinners and status updates
+- **Self-Diagnostics**: Built-in checks for repository and API configuration
+
+For detailed information about all changes, see [CHANGELOG.md](CHANGELOG.md).
+
+## Dependencies
 
 Managed via pip in `requirements.txt`. Key packages:
-- `requests` for API calls
-- `python-dotenv` for environment vars
+- `requests` - API communication with OpenRouter
+- `python-dotenv` - Environment variable management
+- `colorama` - Cross-platform colored terminal output
+- `halo` - Beautiful loading spinners
+- `rich` - Enhanced terminal formatting and UI
 
-Development: `ruff`, `pytest`, `mypy`, `pre-commit`.
+Development: `ruff`, `pytest`, `pytest-cov`, `pre-commit`.
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 autocommit/
 ├── src/                    # Core package
 │   ├── __init__.py
-│   ├── api_client.py      # OpenRouter integration
-│   └── git_utils.py       # Git operations
-├── main.py                # CLI entrypoint
-├── requirements.txt       # pip support
+│   ├── api_client.py      # OpenRouter integration & AI parsing
+│   ├── git_utils.py       # Git operations & smart diff
+│   └── ui.py              # Rich terminal interface
+├── tests/                  # Test suite
+│   ├── __init__.py
+│   └── test_api_client.py # Comprehensive parsing tests
+├── main.py                # CLI entrypoint with self-tests
+├── requirements.txt       # pip dependencies
+├── setup.py               # Package configuration
 └── LICENSE                # GPL-3.0
 ```
 
-## 🤝 Contributing
+## Testing
+
+The project includes comprehensive testing:
+
+```bash
+# Run all tests
+pytest
+
+# Run with coverage
+pytest --cov=src
+
+# Run application self-tests
+python3 main.py --test
+
+# Test API connection
+python3 main.py --test-api
+```
+
+Test coverage includes:
+- AI response parsing edge cases
+- Markdown and code block cleanup
+- Complex AI response handling
+- Whitespace and formatting
+- Conventional commit detection
+
+## Contributing
 
 1. Fork the repo
 2. Create feature branch: `git checkout -b feature/amazing-feature`
 3. Install dev deps: `pip install -r requirements.txt`
-4. Commit: `git add . && python3 main.py`
-5. Push and create PR
+4. Run tests: `pytest`
+5. Commit with AI: `git add . && python3 main.py`
+6. Push and create PR
 
-Ensure Python 3.11.13 and run `pytest` before submitting.
+Ensure Python 3.11+ and all tests pass before submitting.
 
-## 📄 License
+For detailed information about changes and version history, see [CHANGELOG.md](CHANGELOG.md).
+
+## License
 
 GPL-3.0 - See [LICENSE](LICENSE) file for details.
 
+## Screenshots
+
+The application features a beautiful terminal interface with:
+- Styled commit preview boxes
+- Interactive confirmation prompts
+- Loading spinners with progress feedback
+- Colored output and statistics
+- Responsive terminal layouts
+
+## Advanced Usage
+
+```bash
+# Use different AI models
+python3 main.py --model anthropic/claude-3.5-sonnet
+python3 main.py --model openrouter/sonoma-dusk-alpha
+
+# Debug mode for troubleshooting
+python3 main.py --debug
+
+# Skip confirmation for automation
+python3 main.py -y
+
+# Generate message without committing
+python3 main.py --dry-run
+```
+
+## Performance
+
+- **Fast**: Optimized API calls with smart diff truncation
+- **Reliable**: Comprehensive error handling and retries
+- **Smart**: Context-aware parsing for complex AI responses
+- **Responsive**: Terminal-adaptive UI that works on any screen size
+
 ---
 
-**Status: Production Ready** | **Python: 3.11+** | **License: GPL-3.0**
+**Status: Production Ready** | **Python: 3.11+** | **License: GPL-3.0** | **Version: 2.0+**
