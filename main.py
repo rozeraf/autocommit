@@ -27,7 +27,7 @@ from colorama import init as colorama_init
 from dotenv import load_dotenv
 from halo import Halo
 
-from src import api_client, git_utils
+from src import api_client, git_utils, ui
 
 load_dotenv()
 
@@ -52,354 +52,7 @@ def setup_logging(debug: bool = False):
 logger = logging.getLogger(__name__)
 
 
-from rich.console import Console
-from rich.panel import Panel
-from rich.text import Text
-from rich.columns import Columns
-from rich.align import Align
-from colorama import Fore, Style
 
-console = Console()
-
-def show_confirmation(commit_msg: str, description: str | None, skip_confirm: bool = False) -> bool:
-    """Shows a beautifully formatted commit preview using rich library"""
-    
-    # Calculate stats
-    msg_words = len(commit_msg.split())
-    desc_words = len(description.split()) if description else 0
-    total_words = msg_words + desc_words
-    total_chars = len(commit_msg) + (len(description) if description else 0)
-    
-    print()
-    
-    # Create message panel with rich
-    message_text = Text(commit_msg)
-    message_panel = Panel(
-        message_text,
-        title="[cyan]Message[/cyan]",
-        border_style="bright_white",
-        expand=False,
-        padding=(0, 1)
-    )
-    
-    # Center and print message panel
-    console.print(Align.center(message_panel))
-    
-    # Create description panel if present
-    if description:
-        print()  # Add spacing
-        
-        # Parse and format description
-        desc_lines = []
-        changes = []
-        details = []
-        current_list = changes
-        
-        for line in description.split('\n'):
-            line = line.strip()
-            if line.lower().startswith(('changes:', 'details:', 'impact:', 'notes:')):
-                current_list = details
-                continue
-            if line:
-                current_list.append(line)
-        
-        # Format sections
-        if changes:
-            desc_lines.append("[cyan]Changes:[/cyan]")
-            for line in changes:
-                if not line.startswith('-'):
-                    line = '- ' + line
-                desc_lines.append(line)
-        
-        if details:
-            if changes:
-                desc_lines.append("")  # Add separator
-            desc_lines.append("[cyan]Details:[/cyan]")
-            for line in details:
-                if not line.startswith('-'):
-                    line = '- ' + line
-                desc_lines.append(line)
-        
-        description_text = Text.from_markup("\n".join(desc_lines))
-        description_panel = Panel(
-            description_text,
-            title="[cyan]Description[/cyan]",
-            border_style="bright_white",
-            expand=False,
-            padding=(0, 1)
-        )
-        
-        console.print(Align.center(description_panel))
-    
-    # Show stats and command preview
-    stats_parts = []
-    if msg_words > 0:
-        stats_parts.append(f"[green]{msg_words}[/green] words")
-    if desc_words > 0:
-        stats_parts.append(f"+[cyan]{desc_words}[/cyan] in desc")
-    stats_parts.append(f"[blue]{total_chars}[/blue] chars")
-    stats = f"({', '.join(stats_parts)})"
-    
-    # Show length warning if needed
-    first_line_length = len(commit_msg.split('\n')[0])
-    if first_line_length > 50:
-        console.print(f"\n[yellow]Note:[/yellow] First line is {first_line_length} chars - consider keeping under 50 for readability")
-    
-    # Command preview
-    console.print(f"\n[cyan]Command:[/cyan] {stats}")
-    commit_preview = f"git commit -m \"{commit_msg}\""
-    if description:
-        first_desc_line = description.split('\n')[0].strip()
-        if len(first_desc_line) > 40:
-            first_desc_line = first_desc_line[:37] + "..."
-        commit_preview += f' -m "{first_desc_line}"'
-    
-    # Truncate if too long
-    terminal_width = console.size.width
-    preview_width = min(terminal_width - 4, 100)
-    if len(commit_preview) > preview_width:
-        visible_width = preview_width - 5
-        commit_preview = commit_preview[:visible_width] + "..."
-    
-    console.print(f"  {commit_preview}")
-    
-    if skip_confirm:
-        return True
-
-    # Confirmation prompt with rich styling
-    console.print()
-    prompt_text = Text()
-    prompt_text.append("Create this commit? ", style="cyan")
-    prompt_text.append("[Y]", style="green bold")
-    prompt_text.append("es / ", style="white")
-    prompt_text.append("[N]", style="red bold")
-    prompt_text.append("o / ", style="white")
-    prompt_text.append("[R]", style="yellow bold")
-    prompt_text.append("egenerate: ", style="white")
-    
-    console.print(prompt_text, end="")
-    
-    confirm = input().strip().lower()
-    if confirm in ("r", "regenerate"):
-        return None
-    return confirm in ("", "y", "yes")    
-    def calculate_optimal_width(content_lines: list[str], min_width: int = 40, padding: int = 4) -> int:
-        """Calculate optimal box width based on content and terminal constraints.
-        Ensures aesthetic proportions and proper padding."""
-        term_width = get_terminal_width()
-        
-        # Calculate maximum content width
-        max_content = max(len(strip_color_codes(line)) for line in content_lines) if content_lines else 0
-        
-        # Add padding for margins and box borders
-        desired_width = max_content + padding
-        
-        # Ensure width is between min_width and terminal width
-        width = max(min_width, desired_width)
-        width = min(width, term_width - 4)  # Leave 2 chars margin on each side
-        
-        # Round up to next multiple of 2 for symmetry
-        return (width + 1) & ~1
-    
-    def strip_color_codes(text: str) -> str:
-        """Remove color codes from string to get true visible length"""
-        for code in [f"{Fore.CYAN}", f"{Fore.GREEN}", f"{Fore.YELLOW}", f"{Fore.BLUE}",
-                    f"{Style.BRIGHT}", f"{Style.RESET_ALL}", f"{Style.DIM}"]:
-            text = text.replace(code, "")
-        return text
-    
-    def get_terminal_width():
-        """Get terminal width or fallback to safe default"""
-        try:
-            import shutil
-            width = shutil.get_terminal_size().columns
-            # Leave some margin for terminal decorations
-            return min(width - 2, 100)  # Cap at 100 for better readability, -2 for margin
-        except Exception:  # Handle any potential exceptions more specifically
-            return 78  # Safe fallback (80 - 2)
-    
-    def wrap_text(text: str, width: int, first_line: bool = False) -> list[str]:
-        """Wrap text to fit within width, preserving words and handling bullet points"""
-        import textwrap
-        # For commit messages, try to keep first line shorter if it's long content
-        target_width = width - 4  # Basic padding
-        
-        # Handle bullet points with proper indentation
-        if text.lstrip().startswith('- '):
-            indent = len(text) - len(text.lstrip())
-            bullet_text = text[indent:]
-            subsequent_indent = ' ' * (indent + 2)  # Align with text after bullet
-            wrapped = textwrap.wrap(
-                bullet_text,
-                width=target_width - indent,
-                initial_indent='',
-                subsequent_indent=' ' * 2,  # Indent continuation lines
-                break_long_words=True,
-                break_on_hyphens=True
-            )
-            return [(' ' * indent + line) for line in wrapped]
-        
-        # Handle first line length for commit messages
-        if first_line and len(text) > target_width - 10:
-            target_width = min(target_width, 50)  # Limit first line to 50 chars
-            
-        return textwrap.wrap(text, width=target_width, break_long_words=True, break_on_hyphens=True)
-    
-    term_width = get_terminal_width()
-    
-    # Calculate word and char counts
-    msg_words = len(commit_msg.split())
-    desc_words = len(description.split()) if description else 0
-    total_words = msg_words + desc_words
-    total_chars = len(commit_msg) + (len(description) if description else 0)
-    
-    # We'll add the stats near the command preview at the end
-    print()
-    
-    # Prepare message lines
-    msg_lines = []
-    first_line = True
-    for line in commit_msg.split('\n'):
-        wrapped = wrap_text(line, term_width, first_line)
-        msg_lines.extend(wrapped)
-        first_line = False
-    
-    # Calculate optimal width for message box
-    msg_width = calculate_optimal_width(msg_lines)
-    
-    # Center offset for boxes
-    center_offset = ' ' * ((term_width - msg_width) // 2)
-    
-    # Message box with consistent width
-    label = "Message"
-    label_padding = " " * (4 - len(label) // 2)
-    top_border = f"{center_offset}╭─{label_padding}{Fore.CYAN}{label}{Style.RESET_ALL}─{'─' * (msg_width - len(label) - 6)}╮"
-    print(f"{Style.BRIGHT}{top_border}{Style.RESET_ALL}")
-    
-    # Content lines with proper padding
-    for line in msg_lines:
-        visible_len = len(strip_color_codes(line))
-        padding = " " * (msg_width - 2 - visible_len)
-        print(f"{Style.BRIGHT}{center_offset}│ {line}{padding}│{Style.RESET_ALL}")
-    
-    # Bottom border
-    print(f"{Style.BRIGHT}{center_offset}╰{'─' * (msg_width - 2)}╯{Style.RESET_ALL}")
-    
-    # Description box if present
-    if description:
-        print("\n")  # Add extra line for better visual separation
-        desc_lines = []
-        
-        # Structure description into sections
-        changes = []
-        details = []
-        current_list = changes
-        
-        # Parse sections more intelligently
-        for line in description.split('\n'):
-            line = line.strip()
-            if line.lower().startswith(('changes:', 'details:', 'impact:', 'notes:')):
-                current_list = details
-                continue
-            if line:
-                current_list.append(line)
-        
-        # Format main changes first with proper indentation
-        if changes:
-            desc_lines.append(f"{Fore.CYAN}Changes:{Style.RESET_ALL}")
-            for line in changes:
-                if not line.startswith('-'):
-                    line = '- ' + line
-                desc_lines.extend(wrap_text(line, term_width))
-        
-        # Then additional details if any
-        if details:
-            if changes:  # Add visual separator between sections
-                desc_lines.append("")
-            desc_lines.append(f"{Fore.CYAN}Details:{Style.RESET_ALL}")
-            for line in details:
-                if not line.startswith('-'):
-                    line = '- ' + line
-                desc_lines.extend(wrap_text(line, term_width))
-        
-        def strip_color_codes(text: str) -> str:
-            """Remove color codes from string to get true visible length"""
-            for code in [f"{Fore.CYAN}", f"{Fore.GREEN}", f"{Fore.YELLOW}", 
-                        f"{Style.BRIGHT}", f"{Style.RESET_ALL}", f"{Style.DIM}"]:
-                text = text.replace(code, "")
-            return text
-            
-        # Calculate optimal width for description box
-        desc_width = calculate_optimal_width(desc_lines, padding=6)  # Extra padding for bullets
-        
-        # Use same center offset for alignment
-        center_offset = ' ' * ((term_width - desc_width) // 2)
-        
-        # Top border with matching style
-        label = "Description"
-        label_padding = " " * (4 - len(label) // 2)
-        top_border = f"{center_offset}╭─{label_padding}{Fore.CYAN}{label}{Style.RESET_ALL}─{'─' * (desc_width - len(label) - 6)}╮"
-        print(f"{Style.BRIGHT}{top_border}{Style.RESET_ALL}")
-        
-        # Content lines with proper padding and color preservation
-        for line in desc_lines:
-            # Calculate correct padding based on visible length
-            visible_len = len(strip_color_codes(line))
-            padding = " " * (desc_width - 2 - visible_len)
-            print(f"{Style.BRIGHT}{center_offset}│ {line}{padding}│{Style.RESET_ALL}")
-        
-        # Bottom border
-        print(f"{Style.BRIGHT}{center_offset}╰{'─' * (desc_width - 2)}╯{Style.RESET_ALL}")
-    
-    # Show command preview and stats
-    preview_width = min(term_width - 4, 100)  # Keep reasonable width with margin
-    
-    # Format stats with colors
-    stats_parts = []
-    if msg_words > 0:
-        stats_parts.append(f"{Fore.GREEN}{msg_words}{Style.RESET_ALL} words")
-    if desc_words > 0:
-        stats_parts.append(f"+{Fore.CYAN}{desc_words}{Style.RESET_ALL} in desc")
-    stats_parts.append(f"{Fore.BLUE}{total_chars}{Style.RESET_ALL} chars")
-    stats = f"({', '.join(stats_parts)})"
-    
-    # Show length warning if needed
-    if len(msg_lines[0]) > 50:
-        print(f"\n{Fore.YELLOW}Note:{Style.RESET_ALL} First line is {len(msg_lines[0])} chars - consider keeping under 50 for readability")
-    
-    # Preview section with aligned stats
-    print(f"\n{Fore.CYAN}Command:{Style.RESET_ALL} {stats}")
-    commit_preview = f"git commit -m \"{commit_msg}\""
-    if description:
-        first_desc_line = description.split('\n')[0].strip()
-        # Truncate long description lines nicely
-        if len(first_desc_line) > 40:
-            first_desc_line = first_desc_line[:37] + "..."
-        commit_preview += f' -m "{first_desc_line}"'
-    
-    # Ensure preview doesn't exceed terminal width
-    if len(commit_preview) > preview_width:
-        visible_width = preview_width - 5  # Account for ellipsis
-        commit_preview = commit_preview[:visible_width] + "..."
-    
-    print(f"  {commit_preview}")
-    
-    if skip_confirm:
-        return True
-
-    print()
-    confirmation = f"\n{Fore.CYAN}Create this commit? {Style.RESET_ALL}"
-    options = [
-        f"{Fore.GREEN}[Y]{Style.RESET_ALL}es",
-        f"{Fore.RED}[N]{Style.RESET_ALL}o",
-        f"{Fore.YELLOW}[R]{Style.RESET_ALL}egenerate"
-    ]
-    print(confirmation + " / ".join(options) + ": ", end="")
-    
-    confirm = input().strip().lower()
-    if confirm in ("r", "regenerate"):
-        return None
-    return confirm in ("", "y", "yes")
 
 
 def main():
@@ -421,53 +74,44 @@ def main():
         return
 
     if args.test:
-        print("Running application self-tests...")
-        all_passed = True
-
+        # Prepare test results
+        test_results = []
+        
         # 1. Check for git repo
-        print("\n1. Checking for Git repository...")
         _, code = git_utils.run_command(["git", "rev-parse", "--git-dir"])
-        if code != 0:
-            print(f"{Fore.RED}✗ FAIL: Not a Git repository.")
-            all_passed = False
-        else:
-            print(f"{Fore.GREEN}✓ OK: Git repository found.")
+        test_results.append({
+            "name": "Checking for Git repository",
+            "passed": code == 0,
+            "message": "Git repository found" if code == 0 else "Not a Git repository"
+        })
 
         # 2. Check for API Key
-        print("\n2. Checking for OPENROUTER_API_KEY...")
         api_key = os.getenv("OPENROUTER_API_KEY")
-        if not api_key:
-            print(f"{Fore.RED}✗ FAIL: OPENROUTER_API_KEY environment variable not set.")
-            all_passed = False
-        else:
-            print(f"{Fore.GREEN}✓ OK: OPENROUTER_API_KEY is set.")
+        test_results.append({
+            "name": "Checking for OPENROUTER_API_KEY",
+            "passed": bool(api_key),
+            "message": "OPENROUTER_API_KEY is set" if api_key else "OPENROUTER_API_KEY environment variable not set"
+        })
 
         # 3. Check git_utils.get_git_diff functionality
-        print("\n3. Checking for staged files (via git_utils)...")
         staged_files, code = git_utils.run_command(["git", "diff", "--cached", "--name-only"])
-        if code != 0:
-            print(f"{Fore.RED}✗ FAIL: Command 'git diff --cached --name-only' failed.")
-            all_passed = False
-        else:
-            print(f"{Fore.GREEN}✓ OK: Can check for staged files.")
-            if not staged_files.strip():
-                print(f"{Fore.YELLOW}NOTE: No files are currently staged.")
+        test_results.append({
+            "name": "Checking for staged files",
+            "passed": code == 0,
+            "message": "Can check for staged files" if code == 0 else "Command 'git diff --cached --name-only' failed",
+            "note": "No files are currently staged" if code == 0 and not staged_files.strip() else None
+        })
 
         # 4. Run unit tests
-        print("\n4. Running unit tests with pytest...")
         _, code = git_utils.run_command(["pytest"], show_output=True)
-        if code != 0:
-            print(f"{Fore.RED}✗ FAIL: Unit test suite failed.{Style.RESET_ALL}")
-            all_passed = False
-        else:
-            print(f"{Fore.GREEN}✓ OK: Unit test suite passed.{Style.RESET_ALL}")
+        test_results.append({
+            "name": "Running unit tests with pytest",
+            "passed": code == 0,
+            "message": "Unit test suite passed" if code == 0 else "Unit test suite failed"
+        })
 
-        if all_passed:
-            print(f"\n{Fore.GREEN}{Style.BRIGHT}All self-tests passed!{Style.RESET_ALL}")
-            sys.exit(0)
-        else:
-            print(f"\n{Fore.RED}{Style.BRIGHT}Some self-tests failed.{Style.RESET_ALL}")
-            sys.exit(1)
+        all_passed = ui.show_test_results(test_results)
+        sys.exit(0 if all_passed else 1)
 
     if args.debug:
         logger.info("Git Auto Commit: generating commit for staged files...")
@@ -475,7 +119,7 @@ def main():
     # Check if we're in a git repository
     _, code = git_utils.run_command(["git", "rev-parse", "--git-dir"])
     if code != 0:
-        print(f"{Fore.RED}Error: git repository not found.")
+        ui.show_error("git repository not found.")
         sys.exit(1)
 
     model_name = args.model or os.getenv("OPENROUTER_MODEL", "anthropic/claude-3.5-sonnet")
@@ -496,10 +140,9 @@ def main():
     # Check for staged changes with nice formatting
     diff = git_utils.get_git_diff()
     if not diff:
-        print(f"\n{Fore.YELLOW}No staged changes found!{Style.RESET_ALL}")
-        print(f"{Fore.CYAN}Tip:{Style.RESET_ALL} Stage your changes first with:")
-        print(f"  git add <files>")
-        print(f"  git add -p {Fore.CYAN}# to stage specific changes{Style.RESET_ALL}")
+        ui.show_warning("No staged changes found!")
+        ui.show_tip("Stage your changes first with: git add <files>")
+        ui.show_info("git add -p # to stage specific changes")
         sys.exit(1)
 
     while True:
@@ -524,33 +167,32 @@ def main():
             spinner.fail(f"{Fore.RED}Failed to generate commit message{Style.RESET_ALL}")
 
         if not result:
-            print(f"{Fore.RED}Try: python3 main.py --test-api")
+            ui.show_error("Try: python3 main.py --test-api")
             sys.exit(1)
 
         commit_msg, description = result
 
         if args.dry_run:
-            print(f"\n{Style.BRIGHT}╭─ Dry Run: Commit Message ─╮")
-            print(f"│ {Fore.YELLOW}Message:{Style.RESET_ALL} {Fore.GREEN}{commit_msg}")
+            ui.show_info("Dry Run: Commit Message")
+            ui.show_success(f"Message: {commit_msg}")
             if description:
-                print(f"│ {Fore.YELLOW}Description:{Style.RESET_ALL}\n{Fore.CYAN}{description}")
-            print(f"{Style.BRIGHT}╰──────────────────────────╯")
+                ui.show_info(f"Description:\n{description}")
             sys.exit(0)
 
-        if show_confirmation(commit_msg, description, args.yes):
+        if ui.show_confirmation(commit_msg, description, args.yes):
             success = git_utils.commit_changes(commit_msg, description)
             if success:
-                print(f"{Fore.GREEN}Done!")
+                ui.show_success("Done!")
             else:
                 sys.exit(1)
             break
         else:
             retry_input = input("Retry generating commit message? [y/N]: ").lower()
             if retry_input in ("y", "yes"):
-                print(f"{Fore.YELLOW}Regenerating commit message...")
+                ui.show_info("Regenerating commit message...")
                 continue
             else:
-                print(f"{Fore.YELLOW}Commit cancelled.")
+                ui.show_info("Commit cancelled.")
                 sys.exit(0)
 
 
