@@ -211,34 +211,37 @@ RULES:
             return None
     
     def test_api_key(self) -> bool:
-        """Test if the OpenRouter API key is valid and working"""
-        logger.info("Testing API key...")
+        """Test if the OpenRouter API is reachable (TCP check only, no API calls)"""
+        logger.info("Testing API connectivity...")
         logger.debug(f"URL: {self.api_url}")
         logger.debug(f"Model: {self.model}")
         
-        payload = {
-            "model": self.model,
-            "messages": [{"role": "user", "content": "Hello"}],
-            "max_tokens": 10
-        }
+        # Import here to avoid circular imports
+        from .tcp_check import check_openrouter_connectivity, parse_url_for_tcp_check
         
         try:
-            response = self.http_client.post(
-                "/chat/completions",
-                json=payload,
-                headers=self.get_headers(),
-                timeout=30
-            )
+            # First check if we can reach OpenRouter at all
+            if not check_openrouter_connectivity():
+                logger.error("Cannot reach OpenRouter API server")
+                return False
             
-            response.raise_for_status()
-            logger.debug(f"Status: {response.status_code}")
-            logger.info("API key is working!")
+            # Parse the API URL to get host and port
+            host, port = parse_url_for_tcp_check(self.api_url)
+            logger.debug(f"Checking connectivity to {host}:{port}")
+            
+            # Additional check for the specific host if different
+            if host != "openrouter.ai":
+                from .tcp_check import check_tcp_connection
+                if not check_tcp_connection(host, port, timeout=5.0):
+                    logger.error(f"Cannot reach {host}:{port}")
+                    return False
+            
+            logger.info("API server is reachable!")
+            logger.info("Note: This only checks connectivity, not API key validity")
             return True
             
         except Exception as e:
-            logger.error(f"Problem with API key or connection: {e}")
-            if hasattr(e, 'response') and e.response is not None:
-                logger.error(f"Response: {e.response.text}")
+            logger.error(f"Problem with API connectivity: {e}")
             return False
     
     def _parse_ai_response(self, full_message: str) -> CommitMessage:
