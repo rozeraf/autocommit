@@ -47,6 +47,7 @@ def show_confirmation(commit_msg: str, description: str | None, skip_confirm: bo
     message_panel = Panel(
         message_text,
         title="[cyan]Message[/cyan]",
+        title_align="left",
         border_style="bright_white",
         expand=False,
         padding=(0, 1)
@@ -65,6 +66,7 @@ def show_confirmation(commit_msg: str, description: str | None, skip_confirm: bo
         description_panel = Panel(
             description_text,
             title="[cyan]Description[/cyan]",
+            title_align="left",
             border_style="bright_white",
             expand=False,
             padding=(0, 1)
