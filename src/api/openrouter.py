@@ -108,8 +108,10 @@ class OpenRouterClient:
             logger.debug("Could not determine context length, using default values.")
         
         # Import here to avoid circular imports
-        from .. import git_utils
-        smart_diff = git_utils.get_smart_diff(diff, context_length)
+        from ..parsers import DiffParser
+        diff_parser = DiffParser()
+        smart_diff_result = diff_parser.parse_diff(diff, context_length)
+        smart_diff = smart_diff_result.content
         
         system_prompt = """Your task is to generate a commit message based on the provided diff, following the Conventional Commits specification.
 
@@ -197,8 +199,21 @@ RULES:
             
             ai_response = data["choices"][0]["message"]["content"].strip()
             logger.debug(f"AI Response:\n{ai_response}")
+
+            # Use the new commit parser
+            from ..parsers import CommitParser
+            parser = CommitParser()
+            parsed_commit = parser.parse_ai_response(ai_response)
             
-            return self._parse_ai_response(ai_response)
+            # Log warnings if any
+            if parsed_commit.warnings:
+                for warning in parsed_commit.warnings:
+                    logger.warning(f"Commit parsing warning: {warning}")
+            
+            return CommitMessage(
+                subject=parsed_commit.subject,
+                description=parsed_commit.description
+            )
             
         except Exception as e:
             logger.error(f"API request failed: {e}")
@@ -244,138 +259,6 @@ RULES:
             logger.error(f"Problem with API connectivity: {e}")
             return False
     
-    def _parse_ai_response(self, full_message: str) -> CommitMessage:
-        """Parse AI response into structured commit message"""
-        import re
-        
-        def split_on_dash(text: str) -> tuple[str, str | None]:
-            """Split text on first dash that follows the commit type and scope"""
-            # Find the first colon (after type and scope)
-            colon_idx = text.find(':')
-            if colon_idx == -1:
-                return text, None
-                
-            # Look for dash after the colon
-            after_colon = text[colon_idx + 1:]
-            dash_idx = after_colon.find('-')
-            if dash_idx == -1:
-                return text, None  # No dash found, return full text
-                
-            # Split at the dash
-            subject = text[:colon_idx + 1 + dash_idx].strip()
-            details = text[colon_idx + 1 + dash_idx + 1:].strip()
-            return subject, details
-        
-        # Clean up common markdown patterns
-        cleaned_message = full_message.strip()
-        
-        # Remove mermaid code blocks more thoroughly
-        while '```mermaid' in cleaned_message:
-            start_idx = cleaned_message.find('```mermaid')
-            if start_idx == -1:
-                break
-            end_idx = cleaned_message.find('```', start_idx + 3)
-            if end_idx != -1:
-                cleaned_message = cleaned_message[:start_idx].strip() + cleaned_message[end_idx + 3:].strip()
-            else:
-                # If no closing ```, remove from start_idx to end
-                cleaned_message = cleaned_message[:start_idx].strip()
-        
-        # Remove other code blocks more robustly
-        while '```' in cleaned_message:
-            start_idx = cleaned_message.find('```')
-            if start_idx == -1:
-                break
-            end_idx = cleaned_message.find('```', start_idx + 3)
-            if end_idx != -1:
-                cleaned_message = cleaned_message[:start_idx].strip() + cleaned_message[end_idx + 3:].strip()
-            else:
-                cleaned_message = cleaned_message[:start_idx].strip()
-        
-        # Remove common AI response patterns more comprehensively
-        unwanted_patterns = [
-            r'Looking at the diff, this represents.*?(?=\n|$)',
-            r'^This is a [a-zA-Z]+.*?(?=\n|$)',  # More specific - "This is a [word]" at start
-            r'Based on the changes.*?(?=\n|$)',
-            r'The changes include.*?(?=\n|$)',
-            r'### Analysis.*?(?=\n\n)',
-            r'## Summary.*?(?=\n\n)',
-            r'- \*\*Core project files\*\*.*?(?=\n\n|\Z)',
-            r'- \*\*Configuration files\*\*.*?(?=\n\n|\Z)',
-            r'- \*\*Documentation\*\*.*?(?=\n\n|\Z)',
-            r'- \*\*Dependencies\*\*.*?(?=\n\n|\Z)',
-            r'graph TD.*?(?=\n\n|\Z)',
-            r'\n{3,}',  # Only remove 3+ consecutive newlines
-        ]
-        
-        for pattern in unwanted_patterns:
-            cleaned_message = re.sub(pattern, '', cleaned_message, flags=re.IGNORECASE | re.DOTALL)
-            cleaned_message = re.sub(r'\n\s*\n', '\n\n', cleaned_message)  # Clean up extra newlines
-        
-        # Remove extra whitespace and markdown artifacts more aggressively
-        cleaned_message = re.sub(r'\*\*(.*?)\*\*', r'\1', cleaned_message)  # Remove **bold**
-        cleaned_message = re.sub(r'\*(.*?)\*', r'\1', cleaned_message)  # Remove *italic*
-        cleaned_message = re.sub(r'`(.*?)`', r'\1', cleaned_message)  # Remove `code`
-        cleaned_message = re.sub(r'#{1,6}\s*', '', cleaned_message)  # Remove headers
-        cleaned_message = re.sub(r'[-*]\s*\*?\*?[A-Za-z ]+\*?\*?:', '', cleaned_message)  # Remove bullet points with bold
-        
-        # Strip leading/trailing whitespace
-        cleaned_message = cleaned_message.strip()
-        
-        # Try to find the actual commit message if the first line doesn't look like one
-        lines = cleaned_message.split('\n')
-        commit_line_idx = 0
-        
-        # Look for a line that looks like a conventional commit (type: or type(scope):)
-        for i, line in enumerate(lines):
-            line = line.strip()
-            if line and re.match(r'^[a-z]+(\([^)]+\))?:', line):
-                commit_line_idx = i
-                break
-        
-        # If we found a commit-like line, reconstruct the message from that point
-        if commit_line_idx > 0:
-            cleaned_message = '\n'.join(lines[commit_line_idx:])
-        
-        # Now parse the cleaned message
-        lines = cleaned_message.split('\n', 1)
-        first_line = lines[0].strip() if lines else ""
-        extra_lines = lines[1].strip() if len(lines) > 1 else ""
-        
-        # Process the first line to ensure it's a concise conventional commit
-        commit_msg = first_line
-        if first_line and ':' in first_line:
-            # If the first line contains details after a dash, move them to description
-            subject, details = split_on_dash(first_line)
-            if details:
-                commit_msg = subject
-                extra_lines = (details + "\n" + extra_lines) if extra_lines else details
-        
-        # If the message is still too long, try to make it more concise
-        if len(commit_msg) > 70 and ':' in commit_msg:
-            # Keep only up to the first logical break after type(scope):
-            parts = commit_msg.split(':', 1)
-            header = parts[0] + ':'  # type(scope):
-            content = parts[1].strip()
-            
-            # Find a good break point
-            break_points = ['. ', ', ', ' - ', ' and ']  # Removed ' with ' as it's too common
-            for point in break_points:
-                idx = content.find(point)
-                if idx > 0 and idx < 50:  # Found a break point in reasonable range
-                    commit_msg = header + ' ' + content[:idx]
-                    remaining = content[idx + len(point):].strip()
-                    if remaining:
-                        extra_lines = (remaining + "\n" + extra_lines) if extra_lines else remaining
-                    break
-        
-        description = extra_lines if extra_lines else None
-        
-        # Clean up description
-        if description:
-            description = description.strip()
-        
-        return CommitMessage(subject=commit_msg, description=description)
     
     def close(self):
         """Close the HTTP client"""

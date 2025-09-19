@@ -161,40 +161,12 @@ def calculate_diff_limits(context_length: int | None) -> tuple[int, int]:
 
 
 def get_smart_diff(diff: str, context_length: int | None) -> str:
-    """Gets a smart diff that respects context length limits"""
+    """Gets a smart diff that respects context length limits (legacy function)"""
+    from .parsers import DiffParser
+    
     if not diff:
         return ""
     
-    line_limit, char_limit = calculate_diff_limits(context_length)
-    
-    # Split diff into lines
-    lines = diff.split("\n")
-    
-    # If within limits, return full diff
-    if len(lines) <= line_limit and len(diff) <= char_limit:
-        return diff
-    
-    # Otherwise, take important parts:
-    # 1. File headers (lines starting with 'diff --git')
-    # 2. Chunk headers (@@ markers)
-    # 3. Added/removed lines (+/-) up to limits
-    smart_lines = []
-    in_file_header = False
-    
-    for line in lines:
-        if len("\n".join(smart_lines)) >= char_limit:
-            break
-            
-        if line.startswith("diff --git"):
-            in_file_header = True
-            smart_lines.append(line)
-        elif in_file_header and line.startswith("index "):
-            smart_lines.append(line)
-        elif line.startswith("@@"):
-            in_file_header = False
-            smart_lines.append(line)
-        elif line.startswith("+") or line.startswith("-"):
-            if len(smart_lines) < line_limit:
-                smart_lines.append(line)
-    
-    return "\n".join(smart_lines)
+    diff_parser = DiffParser()
+    smart_diff_result = diff_parser.parse_diff(diff, context_length)
+    return smart_diff_result.content
