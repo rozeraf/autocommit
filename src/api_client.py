@@ -84,7 +84,7 @@ def parse_ai_response(full_message: str) -> tuple[str, str | None]:
         after_colon = text[colon_idx + 1:]
         dash_idx = after_colon.find('-')
         if dash_idx == -1:
-            return text, None
+            return text, None  # No dash found, return full text
             
         # Split at the dash
         subject = text[:colon_idx + 1 + dash_idx].strip()
@@ -120,7 +120,7 @@ def parse_ai_response(full_message: str) -> tuple[str, str | None]:
     # Remove common AI response patterns more comprehensively
     unwanted_patterns = [
         r'Looking at the diff, this represents.*?(?=\n|$)',
-        r'This is.*?(?=\n|$)',
+        r'^This is a [a-zA-Z]+.*?(?=\n|$)',  # More specific - "This is a [word]" at start
         r'Based on the changes.*?(?=\n|$)',
         r'The changes include.*?(?=\n|$)',
         r'### Analysis.*?(?=\n\n)',
@@ -130,7 +130,7 @@ def parse_ai_response(full_message: str) -> tuple[str, str | None]:
         r'- \*\*Documentation\*\*.*?(?=\n\n|\Z)',
         r'- \*\*Dependencies\*\*.*?(?=\n\n|\Z)',
         r'graph TD.*?(?=\n\n|\Z)',
-        r'\n{2,}',  # Multiple newlines
+        r'\n{3,}',  # Only remove 3+ consecutive newlines
     ]
     
     for pattern in unwanted_patterns:
@@ -146,6 +146,21 @@ def parse_ai_response(full_message: str) -> tuple[str, str | None]:
     
     # Strip leading/trailing whitespace
     cleaned_message = cleaned_message.strip()
+    
+    # Try to find the actual commit message if the first line doesn't look like one
+    lines = cleaned_message.split('\n')
+    commit_line_idx = 0
+    
+    # Look for a line that looks like a conventional commit (type: or type(scope):)
+    for i, line in enumerate(lines):
+        line = line.strip()
+        if line and re.match(r'^[a-z]+(\([^)]+\))?:', line):
+            commit_line_idx = i
+            break
+    
+    # If we found a commit-like line, reconstruct the message from that point
+    if commit_line_idx > 0:
+        cleaned_message = '\n'.join(lines[commit_line_idx:])
     
     # Now parse the cleaned message
     lines = cleaned_message.split('\n', 1)
@@ -169,7 +184,7 @@ def parse_ai_response(full_message: str) -> tuple[str, str | None]:
         content = parts[1].strip()
         
         # Find a good break point
-        break_points = ['. ', ', ', ' - ', ' and ', ' with ']
+        break_points = ['. ', ', ', ' - ', ' and ']  # Removed ' with ' as it's too common
         for point in break_points:
             idx = content.find(point)
             if idx > 0 and idx < 50:  # Found a break point in reasonable range
@@ -181,9 +196,8 @@ def parse_ai_response(full_message: str) -> tuple[str, str | None]:
     
     description = extra_lines if extra_lines else None
     
-    # Clean up description bullets and extra text
+    # Clean up description
     if description:
-        description = re.sub(r'^[-*]\s*', '', description, flags=re.MULTILINE)
         description = description.strip()
     
     return commit_msg, description
