@@ -20,7 +20,6 @@ import logging
 from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
-from rich.align import Align
 from colorama import Fore, Style
 
 logger = logging.getLogger(__name__)
@@ -53,7 +52,7 @@ def show_confirmation(commit_msg: str, description: str | None, skip_confirm: bo
         padding=(0, 1)
     )
     
-    console.print(Align.center(message_panel))
+    console.print(message_panel)
     
     # Create description panel if present
     if description:
@@ -71,7 +70,7 @@ def show_confirmation(commit_msg: str, description: str | None, skip_confirm: bo
             padding=(0, 1)
         )
         
-        console.print(Align.center(description_panel))
+        console.print(description_panel)
     
     # Show stats and warnings
     _show_stats_and_warnings(msg_words, desc_words, total_chars, commit_msg)
