@@ -52,9 +52,137 @@ def setup_logging(debug: bool = False):
 logger = logging.getLogger(__name__)
 
 
+from rich.console import Console
+from rich.panel import Panel
+from rich.text import Text
+from rich.columns import Columns
+from rich.align import Align
+from colorama import Fore, Style
+
+console = Console()
+
 def show_confirmation(commit_msg: str, description: str | None, skip_confirm: bool = False) -> bool:
-    """Shows a beautifully formatted commit preview with smart text wrapping"""
+    """Shows a beautifully formatted commit preview using rich library"""
     
+    # Calculate stats
+    msg_words = len(commit_msg.split())
+    desc_words = len(description.split()) if description else 0
+    total_words = msg_words + desc_words
+    total_chars = len(commit_msg) + (len(description) if description else 0)
+    
+    print()
+    
+    # Create message panel with rich
+    message_text = Text(commit_msg)
+    message_panel = Panel(
+        message_text,
+        title="[cyan]Message[/cyan]",
+        border_style="bright_white",
+        expand=False,
+        padding=(0, 1)
+    )
+    
+    # Center and print message panel
+    console.print(Align.center(message_panel))
+    
+    # Create description panel if present
+    if description:
+        print()  # Add spacing
+        
+        # Parse and format description
+        desc_lines = []
+        changes = []
+        details = []
+        current_list = changes
+        
+        for line in description.split('\n'):
+            line = line.strip()
+            if line.lower().startswith(('changes:', 'details:', 'impact:', 'notes:')):
+                current_list = details
+                continue
+            if line:
+                current_list.append(line)
+        
+        # Format sections
+        if changes:
+            desc_lines.append("[cyan]Changes:[/cyan]")
+            for line in changes:
+                if not line.startswith('-'):
+                    line = '- ' + line
+                desc_lines.append(line)
+        
+        if details:
+            if changes:
+                desc_lines.append("")  # Add separator
+            desc_lines.append("[cyan]Details:[/cyan]")
+            for line in details:
+                if not line.startswith('-'):
+                    line = '- ' + line
+                desc_lines.append(line)
+        
+        description_text = Text.from_markup("\n".join(desc_lines))
+        description_panel = Panel(
+            description_text,
+            title="[cyan]Description[/cyan]",
+            border_style="bright_white",
+            expand=False,
+            padding=(0, 1)
+        )
+        
+        console.print(Align.center(description_panel))
+    
+    # Show stats and command preview
+    stats_parts = []
+    if msg_words > 0:
+        stats_parts.append(f"[green]{msg_words}[/green] words")
+    if desc_words > 0:
+        stats_parts.append(f"+[cyan]{desc_words}[/cyan] in desc")
+    stats_parts.append(f"[blue]{total_chars}[/blue] chars")
+    stats = f"({', '.join(stats_parts)})"
+    
+    # Show length warning if needed
+    first_line_length = len(commit_msg.split('\n')[0])
+    if first_line_length > 50:
+        console.print(f"\n[yellow]Note:[/yellow] First line is {first_line_length} chars - consider keeping under 50 for readability")
+    
+    # Command preview
+    console.print(f"\n[cyan]Command:[/cyan] {stats}")
+    commit_preview = f"git commit -m \"{commit_msg}\""
+    if description:
+        first_desc_line = description.split('\n')[0].strip()
+        if len(first_desc_line) > 40:
+            first_desc_line = first_desc_line[:37] + "..."
+        commit_preview += f' -m "{first_desc_line}"'
+    
+    # Truncate if too long
+    terminal_width = console.size.width
+    preview_width = min(terminal_width - 4, 100)
+    if len(commit_preview) > preview_width:
+        visible_width = preview_width - 5
+        commit_preview = commit_preview[:visible_width] + "..."
+    
+    console.print(f"  {commit_preview}")
+    
+    if skip_confirm:
+        return True
+
+    # Confirmation prompt with rich styling
+    console.print()
+    prompt_text = Text()
+    prompt_text.append("Create this commit? ", style="cyan")
+    prompt_text.append("[Y]", style="green bold")
+    prompt_text.append("es / ", style="white")
+    prompt_text.append("[N]", style="red bold")
+    prompt_text.append("o / ", style="white")
+    prompt_text.append("[R]", style="yellow bold")
+    prompt_text.append("egenerate: ", style="white")
+    
+    console.print(prompt_text, end="")
+    
+    confirm = input().strip().lower()
+    if confirm in ("r", "regenerate"):
+        return None
+    return confirm in ("", "y", "yes")    
     def calculate_optimal_width(content_lines: list[str], min_width: int = 40, padding: int = 4) -> int:
         """Calculate optimal box width based on content and terminal constraints.
         Ensures aesthetic proportions and proper padding."""
