@@ -27,7 +27,7 @@ from colorama import init as colorama_init
 from dotenv import load_dotenv
 from halo import Halo
 
-from src import api_client, git_utils, ui
+from src import api, git_utils, ui
 
 load_dotenv()
 
@@ -70,7 +70,8 @@ def main():
     setup_logging(args.debug)
 
     if args.test_api:
-        api_client.test_api_key()
+        with api.OpenRouterClient() as client:
+            client.test_api_key()
         return
 
     if args.test:
@@ -129,13 +130,15 @@ def main():
     # Initialize spinner with consistent styling
     init_spinner = Halo(text=f"{Fore.CYAN}Initializing model{Style.RESET_ALL} '{model_name}'", spinner="dots")
     init_spinner.start()
-    model_info = api_client.get_model_info(model_name)
-    if model_info:
-        model_details = f"({model_info.get('context_length', 'unknown')} tokens)"
-        init_spinner.succeed(f"{Fore.GREEN}Model initialized{Style.RESET_ALL} {Fore.CYAN}{model_details}{Style.RESET_ALL}")
-    else:
-        init_spinner.fail(f"{Fore.RED}Failed to initialize model{Style.RESET_ALL}")
-        sys.exit(1)
+    
+    with api.OpenRouterClient(model=model_name) as client:
+        model_info = client.get_model_info(model_name)
+        if model_info:
+            model_details = f"({model_info.context_length or 'unknown'} tokens)"
+            init_spinner.succeed(f"{Fore.GREEN}Model initialized{Style.RESET_ALL} {Fore.CYAN}{model_details}{Style.RESET_ALL}")
+        else:
+            init_spinner.fail(f"{Fore.RED}Failed to initialize model{Style.RESET_ALL}")
+            sys.exit(1)
 
     # Check for staged changes with nice formatting
     diff = git_utils.get_git_diff()
@@ -145,55 +148,58 @@ def main():
         ui.show_info("git add -p # to stage specific changes")
         sys.exit(1)
 
-    while True:
-        # Show AI thinking animation
-        spinner = Halo(text=f"{Fore.CYAN}Analyzing changes{Style.RESET_ALL} and generating commit message", spinner="dots")
-        spinner.start()
-        result = api_client.generate_commit_message(diff, model_info)
-        
-        if result:
-            commit_msg, description = result
-            word_count = len(commit_msg.split()) + (len(description.split()) if description else 0)
-            char_count = len(commit_msg) + (len(description) if description else 0)
+    with api.OpenRouterClient(model=model_name) as client:
+        while True:
+            # Show AI thinking animation
+            spinner = Halo(text=f"{Fore.CYAN}Analyzing changes{Style.RESET_ALL} and generating commit message", spinner="dots")
+            spinner.start()
+            result = client.generate_commit_message(diff, model_info)
             
-            stats = f"[{word_count} words, {char_count} chars]"
-            spinner.succeed(f"{Fore.GREEN}Commit message generated{Style.RESET_ALL} {Fore.CYAN}{stats}{Style.RESET_ALL}")
-            
-            if args.debug:
-                logger.debug(f"Subject: '{commit_msg}'")
-                if description:
-                    logger.debug(f"Body: '{description[:100]}...'")
-        else:
-            spinner.fail(f"{Fore.RED}Failed to generate commit message{Style.RESET_ALL}")
-
-        if not result:
-            ui.show_error("Try: python3 main.py --test-api")
-            sys.exit(1)
-
-        commit_msg, description = result
-
-        if args.dry_run:
-            ui.show_info("Dry Run: Commit Message")
-            ui.show_success(f"Message: {commit_msg}")
-            if description:
-                ui.show_info(f"Description:\n{description}")
-            sys.exit(0)
-
-        if ui.show_confirmation(commit_msg, description, args.yes):
-            success = git_utils.commit_changes(commit_msg, description)
-            if success:
-                ui.show_success("Done!")
+            if result:
+                commit_msg = result.subject
+                description = result.description
+                word_count = len(commit_msg.split()) + (len(description.split()) if description else 0)
+                char_count = len(commit_msg) + (len(description) if description else 0)
+                
+                stats = f"[{word_count} words, {char_count} chars]"
+                spinner.succeed(f"{Fore.GREEN}Commit message generated{Style.RESET_ALL} {Fore.CYAN}{stats}{Style.RESET_ALL}")
+                
+                if args.debug:
+                    logger.debug(f"Subject: '{commit_msg}'")
+                    if description:
+                        logger.debug(f"Body: '{description[:100]}...'")
             else:
+                spinner.fail(f"{Fore.RED}Failed to generate commit message{Style.RESET_ALL}")
+
+            if not result:
+                ui.show_error("Try: python3 main.py --test-api")
                 sys.exit(1)
-            break
-        else:
-            retry_input = input("Retry generating commit message? [y/N]: ").lower()
-            if retry_input in ("y", "yes"):
-                ui.show_info("Regenerating commit message...")
-                continue
-            else:
-                ui.show_info("Commit cancelled.")
+
+            commit_msg = result.subject
+            description = result.description
+
+            if args.dry_run:
+                ui.show_info("Dry Run: Commit Message")
+                ui.show_success(f"Message: {commit_msg}")
+                if description:
+                    ui.show_info(f"Description:\n{description}")
                 sys.exit(0)
+
+            if ui.show_confirmation(commit_msg, description, args.yes):
+                success = git_utils.commit_changes(commit_msg, description)
+                if success:
+                    ui.show_success("Done!")
+                else:
+                    sys.exit(1)
+                break
+            else:
+                retry_input = input("Retry generating commit message? [y/N]: ").lower()
+                if retry_input in ("y", "yes"):
+                    ui.show_info("Regenerating commit message...")
+                    continue
+                else:
+                    ui.show_info("Commit cancelled.")
+                    sys.exit(0)
 
 
 if __name__ == "__main__":

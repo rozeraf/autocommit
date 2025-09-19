@@ -2,6 +2,6 @@
 Git Auto Commit package
 """
 
-from . import api_client, git_utils
+from . import api, git_utils, ui
 
-__all__ = ["git_utils", "api_client"]
+__all__ = ["git_utils", "api", "ui"]
