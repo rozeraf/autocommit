@@ -134,32 +134,42 @@ class OpenRouterClient:
         system_prompt = """Your task is to generate a commit message based on the provided diff, following the Conventional Commits specification.
 
 RULES:
-1. The output must be ONLY the commit message text, without any extra words or explanations.
-2. The message must be in English.
-3. The format is: `type(scope): subject`
-    - Subject line MUST be concise (max 50-70 chars)
-    - Followed by an optional longer body for details
-    - Followed by an optional `BREAKING CHANGE:` footer.
-4. Use the following types:
-    - `feat`: A new feature.
-    - `fix`: A bug fix.
-    - `docs`: Documentation only changes.
-    - `style`: Code style changes (formatting, etc).
-    - `refactor`: A code change that neither fixes a bug nor adds a feature.
-    - `perf`: A code change that improves performance.
-    - `test`: Adding missing tests or correcting existing tests.
-    - `build`: Changes that affect the build system or external dependencies.
-    - `ci`: Changes to CI configuration files and scripts.
-    - `chore`: Other changes that don't modify src or test files.
-    - `revert`: Reverts a previous commit.
-5. Keep the subject line VERY SHORT and move details to the body:
-    Bad:  feat(ui): add new button component with custom styles and hover effects
-    Good: feat(ui): add new button component
-          
-          - Implemented custom styling system
-          - Added hover effect animations
-          - Updated component documentation
-6. The body should be structured with bullet points (-) and clear sections."""
+1. Output ONLY the commit message text - no explanations, markdown blocks, or extra text.
+
+2. Format: `type(scope): subject`
+   - Subject: max 50 chars, imperative mood ("add", not "added")
+   - Body: detailed bullet points if needed
+   - Footer: BREAKING CHANGE if applicable
+
+3. Scope selection:
+   - Use specific module/component names when possible
+   - Examples: api, ui, config, models, tests, git_utils
+   - Omit scope only for broad changes across multiple areas
+
+4. Types (strict priority order):
+   - `feat`: New features or capabilities
+   - `fix`: Bug fixes and error corrections  
+   - `refactor`: Code restructuring without behavior change
+   - `perf`: Performance improvements
+   - `test`: Test additions or modifications
+   - `docs`: Documentation changes
+   - `style`: Formatting, whitespace, etc.
+   - `build`: Dependencies, build system
+   - `ci`: CI/CD configuration
+   - `chore`: Maintenance tasks
+   - `revert`: Reverting previous commits
+
+5. Body structure (when needed):
+   - Use bullet points with hyphens (-)
+   - Start each point with action verb
+   - Group related changes logically
+   - Explain WHY for complex changes
+
+6. Quality checks:
+   - Subject must be imperative mood
+   - No period at end of subject
+   - Body separated by blank line
+   - Each bullet point is a complete thought"""
 
         config = get_config()
 
