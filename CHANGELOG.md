@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2025-09-20
+
+### Added
+- Comprehensive test suite for the `git_utils` module, covering various command execution scenarios.
+
+### Changed
+- Major refactoring of data models into a dedicated `src/models` package to improve architecture and type safety.
+- Replaced the `toml` library with the built-in `tomllib` (Python 3.11+) to reduce dependencies.
+
+### Fixed
+- Corrected the API client instantiation logic in `main.py` to prevent redundant sessions.
+- Fixed failing tests for `run_command` by correctly asserting for empty string output on errors.
+
+### Removed
+- Old model files (`src/api/models.py`, `src/config/models.py`) after refactoring.
+
+### Chore
+- Fixed `ruff` linting errors (E712) for boolean comparisons in tests.
+- Renamed test files for better clarity and consistency.
+- Removed insecure logging of partial API keys.
+
 
 ## [2.0.0] - 2025-09-19
 
