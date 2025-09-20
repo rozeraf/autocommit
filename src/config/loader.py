@@ -22,9 +22,12 @@ from pathlib import Path
 from typing import Optional
 
 try:
-    import toml
+    import tomllib
 except ImportError:
-    toml = None
+    try:
+        import toml as tomllib
+    except ImportError:
+        tomllib = None
 
 from .models import AIConfig, FormatConfig, DiffConfig, AppConfig
 
@@ -53,13 +56,13 @@ def _find_config_file() -> Optional[Path]:
 
 def _load_toml_config(config_path: Path) -> dict:
     """Load TOML configuration file"""
-    if not toml:
-        logger.warning("toml library not available, using defaults")
+    if not tomllib:
+        logger.warning("tomllib or toml library not available, using defaults")
         return {}
     
     try:
-        with open(config_path, 'r', encoding='utf-8') as f:
-            config_data = toml.load(f)
+        with open(config_path, 'rb') as f:
+            config_data = tomllib.load(f)
         logger.debug(f"Loaded config from {config_path}")
         return config_data
     except Exception as e:

@@ -99,7 +99,8 @@ class OpenRouterClient:
                                diff: str, 
                                model_info: Optional[ModelInfo] = None) -> Optional[CommitMessage]:
         """Generate a commit message via the OpenRouter API"""
-        logger.debug(f"Using API key: {self.api_key[:8]}...")
+        if self.api_key:
+            logger.debug("Using API key.")
         logger.debug(f"URL: {self.api_url}")
         logger.debug(f"Model: {self.model}")
         
