@@ -21,6 +21,8 @@ import logging
 from typing import Optional, Tuple
 from dataclasses import dataclass
 
+from ..config import get_config
+
 logger = logging.getLogger(__name__)
 
 
@@ -62,14 +64,15 @@ class CommitParser:
         r'\n{3,}',  # Only remove 3+ consecutive newlines
     ]
     
-    def __init__(self, max_subject_length: int = 70):
+    def __init__(self, max_subject_length: Optional[int] = None):
         """
         Initialize commit parser
         
         Args:
-            max_subject_length: Maximum length for subject line
+            max_subject_length: Maximum length for subject line (defaults to config)
         """
-        self.max_subject_length = max_subject_length
+        config = get_config()
+        self.max_subject_length = max_subject_length or config.format.max_subject_length
     
     def parse_ai_response(self, full_message: str) -> ParsedCommit:
         """

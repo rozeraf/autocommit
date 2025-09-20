@@ -23,6 +23,7 @@ from typing import Optional, Tuple
 
 from .client import HTTPClient
 from .models import ModelInfo, CommitMessage
+from ..config import get_config
 
 logger = logging.getLogger(__name__)
 
@@ -39,12 +40,14 @@ class OpenRouterClient:
         
         Args:
             api_key: OpenRouter API key (defaults to OPENROUTER_API_KEY env var)
-            api_url: OpenRouter API URL (defaults to OPENROUTER_API_URL env var)
-            model: Model to use (defaults to OPENROUTER_MODEL env var)
+            api_url: OpenRouter API URL (defaults to config or OPENROUTER_API_URL env var)
+            model: Model to use (defaults to config or OPENROUTER_MODEL env var)
         """
+        config = get_config()
+        
         self.api_key = api_key or os.getenv("OPENROUTER_API_KEY")
-        self.api_url = api_url or os.getenv("OPENROUTER_API_URL", "https://openrouter.ai/api/v1")
-        self.model = model or os.getenv("OPENROUTER_MODEL", "anthropic/claude-3.5-sonnet")
+        self.api_url = api_url or config.ai.api_url or os.getenv("OPENROUTER_API_URL", "https://openrouter.ai/api/v1")
+        self.model = model or config.ai.model or os.getenv("OPENROUTER_MODEL", "anthropic/claude-3.5-sonnet")
         
         # Extract base URL from the full API URL
         if "/chat/completions" in self.api_url:
@@ -113,6 +116,9 @@ class OpenRouterClient:
         smart_diff_result = diff_parser.parse_diff(diff, context_length)
         smart_diff = smart_diff_result.content
         
+        logger.debug(f"Smart diff length: {len(smart_diff)} characters")
+        logger.debug(f"Smart diff preview (first 200 chars): {smart_diff[:200]}")
+        
         system_prompt = """Your task is to generate a commit message based on the provided diff, following the Conventional Commits specification.
 
 RULES:
@@ -143,6 +149,8 @@ RULES:
           - Updated component documentation
 6. The body should be structured with bullet points (-) and clear sections."""
 
+        config = get_config()
+        
         payload = {
             "model": self.model,
             "messages": [
@@ -155,8 +163,8 @@ RULES:
                     "content": f"Create a commit message for these changes:\n{smart_diff}"
                 }
             ],
-            "max_tokens": 250,
-            "temperature": 0.4
+            "max_tokens": config.ai.max_tokens,
+            "temperature": config.ai.temperature
         }
         
         try:
@@ -167,7 +175,7 @@ RULES:
                 "/chat/completions",
                 json=payload,
                 headers=self.get_headers(),
-                timeout=45
+                timeout=config.ai.timeout
             )
             
             logger.debug(f"Response status: {response.status_code}")

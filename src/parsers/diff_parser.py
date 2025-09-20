@@ -124,12 +124,16 @@ class DiffParser:
     
     def _calculate_dynamic_limits(self, context_length: int):
         """Calculate limits based on model context length"""
+        from ..config import get_config
+        config = get_config()
+        
         # Reserve space for prompt and response
-        available_for_diff = context_length - 4000  # Conservative estimate
+        available_for_diff = context_length - config.diff.context_reserve
         if available_for_diff > 0:
-            self.max_chars = min(available_for_diff * 0.8, 20000)  # 80% for diff, max 20k
-            # Heuristic: 1 line ~ 80 characters
-            self.max_lines = self.max_chars // 80
+            # Use 80% of available space for diff - NO HARD LIMIT!
+            self.max_chars = int(available_for_diff * 0.8)
+            # Use configured ratio for line calculation
+            self.max_lines = self.max_chars // config.diff.char_per_line_ratio
         logger.debug(f"Dynamic limits: {self.max_lines} lines, {self.max_chars} characters")
     
     def _analyze_diff_stats(self, diff: str) -> DiffStats:

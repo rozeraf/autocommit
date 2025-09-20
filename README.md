@@ -42,16 +42,40 @@ pip install -r requirements.txt
 
 ### 3. Configure API Key
 
-Create `.env` file:
+Create `.env` file with your OpenRouter API key:
 
 ```bash
 echo "OPENROUTER_API_KEY=sk-or-v1-your-key-here" > .env
-echo "OPENROUTER_MODEL=openrouter/sonoma-dusk-alpha" >> .env
 ```
 
-Get key from https://openrouter.ai.
+Get your API key from https://openrouter.ai.
 
-### 4. Usage
+### 4. Configuration (Optional)
+
+The application uses `config.toml` for configuration. If not present, defaults are used.
+
+Create `config.toml` in the project root to customize settings:
+
+```toml
+[ai]
+model = "anthropic/claude-3.5-sonnet"
+api_url = "https://openrouter.ai/api/v1"
+temperature = 0.4
+max_tokens = 250
+timeout = 45
+
+[format]
+max_subject_length = 70
+require_body_for_features = true
+enforce_conventional = true
+allowed_types = ["feat", "fix", "docs", "style", "refactor", "perf", "test", "build", "ci", "chore", "revert"]
+
+[diff]
+context_reserve = 4000
+char_per_line_ratio = 80
+```
+
+### 5. Usage
 
 ```bash
 # Stage changes
@@ -108,13 +132,29 @@ Development: `ruff`, `pytest`, `pytest-cov`, `pre-commit`.
 autocommit/
 ├── src/                    # Core package
 │   ├── __init__.py
-│   ├── api_client.py      # OpenRouter integration & AI parsing
-│   ├── git_utils.py       # Git operations & smart diff
-│   └── ui.py              # Rich terminal interface
+│   ├── api/                # API client modules
+│   │   ├── __init__.py
+│   │   ├── client.py       # HTTP client
+│   │   ├── models.py       # Data models
+│   │   ├── openrouter.py   # OpenRouter integration
+│   │   └── tcp_check.py   # Connectivity checks
+│   ├── config/             # Configuration system
+│   │   ├── __init__.py
+│   │   ├── loader.py       # TOML config loader
+│   │   └── models.py       # Config data classes
+│   ├── parsers/            # Message parsing
+│   │   ├── __init__.py
+│   │   ├── commit_parser.py # Commit message parsing
+│   │   └── diff_parser.py  # Diff processing
+│   ├── git_utils.py        # Git operations & smart diff
+│   └── ui.py               # Rich terminal interface
 ├── tests/                  # Test suite
 │   ├── __init__.py
-│   └── test_api_client.py # Comprehensive parsing tests
+│   ├── test_api_client.py
+│   ├── test_diff_parser.py
+│   └── test_tcp_check.py
 ├── main.py                # CLI entrypoint with self-tests
+├── config.toml            # Configuration file (optional)
 ├── requirements.txt       # pip dependencies
 ├── setup.py               # Package configuration
 └── LICENSE                # GPL-3.0

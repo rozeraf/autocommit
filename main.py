@@ -28,6 +28,7 @@ from dotenv import load_dotenv
 from halo import Halo
 
 from src import api, git_utils, ui
+from src.config import get_config
 
 load_dotenv()
 
@@ -123,7 +124,8 @@ def main():
         ui.show_error("git repository not found.")
         sys.exit(1)
 
-    model_name = args.model or os.getenv("OPENROUTER_MODEL", "anthropic/claude-3.5-sonnet")
+    config = get_config()
+    model_name = args.model or config.ai.model or os.getenv("OPENROUTER_MODEL", "anthropic/claude-3.5-sonnet")
     if args.debug:
         logger.debug(f"Using model: {model_name}")
 

@@ -18,6 +18,9 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 import logging
 import subprocess
+from typing import Optional, Tuple
+
+from .config import get_config
 
 logger = logging.getLogger(__name__)
 
@@ -142,17 +145,20 @@ def commit_changes(message: str, description: str | None = None) -> bool:
 
 def calculate_diff_limits(context_length: int | None) -> tuple[int, int]:
     """Calculate limits for diff based on model context length"""
+    config = get_config()
+    
     # Default values if model information is unavailable
-    char_limit = 8000
-    line_limit = 100
+    char_limit = 8000  # Fixed default
+    line_limit = char_limit // config.diff.char_per_line_ratio
     
     if context_length:
         # Reserve space for prompt and response
-        available_for_diff = context_length - 4000  # Conservative estimate
+        available_for_diff = context_length - config.diff.context_reserve
         if available_for_diff > 0:
-            char_limit = min(available_for_diff * 0.8, 20000)  # 80% for diff, max 20k
-            # Heuristic: 1 line ~ 80 characters.
-            line_limit = char_limit // 80
+            # Use 80% of available space for diff - NO HARD LIMIT!
+            char_limit = int(available_for_diff * 0.8)
+            # Use configured ratio for line calculation
+            line_limit = char_limit // config.diff.char_per_line_ratio
         logger.debug(f"Dynamic limits (context {context_length}): {line_limit} lines, {char_limit} characters")
     else:
         logger.debug(f"Using default limits: {line_limit} lines, {char_limit} characters")
