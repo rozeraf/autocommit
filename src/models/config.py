@@ -3,7 +3,7 @@ Configuration models for Git Auto Commit
 """
 
 from dataclasses import dataclass
-from typing import List
+from typing import List, Dict, Optional
 
 
 @dataclass
@@ -15,6 +15,7 @@ class AIConfig:
     temperature: float
     max_tokens: int
     timeout: int
+    prompts: Optional[Dict[str, str]] = None
 
     def __post_init__(self):
         """Validate AI configuration"""

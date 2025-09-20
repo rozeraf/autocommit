@@ -28,6 +28,47 @@ from ..config import get_config
 logger = logging.getLogger(__name__)
 
 
+DEFAULT_SYSTEM_PROMPT = '''Your task is to generate a commit message based on the provided diff, following the Conventional Commits specification.
+
+RULES:
+1. Output ONLY the commit message text - no explanations, markdown blocks, or extra text.
+
+2. Format: `type(scope): subject`
+   - Subject: max 50 chars, imperative mood ("add", not "added")
+   - Body: detailed bullet points if needed
+   - Footer: BREAKING CHANGE if applicable
+
+3. Scope selection:
+   - Use specific module/component names when possible
+   - Examples: api, ui, config, models, tests, git_utils
+   - Omit scope only for broad changes across multiple areas
+
+4. Types (strict priority order):
+   - `feat`: New features or capabilities
+   - `fix`: Bug fixes and error corrections  
+   - `refactor`: Code restructuring without behavior change
+   - `perf`: Performance improvements
+   - `test`: Test additions or modifications
+   - `docs`: Documentation changes
+   - `style`: Formatting, whitespace, etc.
+   - `build`: Dependencies, build system
+   - `ci`: CI/CD configuration
+   - `chore`: Maintenance tasks
+   - `revert`: Reverting previous commits
+
+5. Body structure (when needed):
+   - Use bullet points with hyphens (-)
+   - Start each point with action verb
+   - Group related changes logically
+   - Explain WHY for complex changes
+
+6. Quality checks:
+   - Subject must be imperative mood
+   - No period at end of subject
+   - Body separated by blank line
+   - Each bullet point is a complete thought'''
+
+
 class OpenRouterClient:
     """OpenRouter API client for generating commit messages"""
 
@@ -131,47 +172,10 @@ class OpenRouterClient:
         logger.debug(f"Smart diff length: {len(smart_diff)} characters")
         logger.debug(f"Smart diff preview (first 200 chars): {smart_diff[:200]}")
 
-        system_prompt = """Your task is to generate a commit message based on the provided diff, following the Conventional Commits specification.
-
-RULES:
-1. Output ONLY the commit message text - no explanations, markdown blocks, or extra text.
-
-2. Format: `type(scope): subject`
-   - Subject: max 50 chars, imperative mood ("add", not "added")
-   - Body: detailed bullet points if needed
-   - Footer: BREAKING CHANGE if applicable
-
-3. Scope selection:
-   - Use specific module/component names when possible
-   - Examples: api, ui, config, models, tests, git_utils
-   - Omit scope only for broad changes across multiple areas
-
-4. Types (strict priority order):
-   - `feat`: New features or capabilities
-   - `fix`: Bug fixes and error corrections  
-   - `refactor`: Code restructuring without behavior change
-   - `perf`: Performance improvements
-   - `test`: Test additions or modifications
-   - `docs`: Documentation changes
-   - `style`: Formatting, whitespace, etc.
-   - `build`: Dependencies, build system
-   - `ci`: CI/CD configuration
-   - `chore`: Maintenance tasks
-   - `revert`: Reverting previous commits
-
-5. Body structure (when needed):
-   - Use bullet points with hyphens (-)
-   - Start each point with action verb
-   - Group related changes logically
-   - Explain WHY for complex changes
-
-6. Quality checks:
-   - Subject must be imperative mood
-   - No period at end of subject
-   - Body separated by blank line
-   - Each bullet point is a complete thought"""
-
         config = get_config()
+
+        # Get the prompt from config, with a fallback to the default
+        system_prompt = (config.ai.prompts or {}).get('openrouter', DEFAULT_SYSTEM_PROMPT)
 
         payload = {
             "model": self.model,

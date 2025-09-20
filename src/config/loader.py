@@ -92,6 +92,7 @@ def get_config() -> AppConfig:
         temperature=config_data.get("ai", {}).get("temperature", 0.3),
         max_tokens=config_data.get("ai", {}).get("max_tokens", 1000),
         timeout=config_data.get("ai", {}).get("timeout", 45),
+        prompts=config_data.get("ai", {}).get("prompts", {}),
     )
 
     format_config = FormatConfig(
