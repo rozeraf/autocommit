@@ -18,9 +18,14 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 import sys
 import os
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from src.api.tcp_check import check_tcp_connection, check_openrouter_connectivity, parse_url_for_tcp_check
+from src.api.tcp_check import (
+    check_tcp_connection,
+    check_openrouter_connectivity,
+    parse_url_for_tcp_check,
+)
 
 
 def test_check_tcp_connection_google_dns():
@@ -31,7 +36,9 @@ def test_check_tcp_connection_google_dns():
 
 def test_check_tcp_connection_invalid_host():
     """Test TCP connection to invalid host (should fail)"""
-    result = check_tcp_connection("invalid-host-that-does-not-exist.com", 80, timeout=1.0)
+    result = check_tcp_connection(
+        "invalid-host-that-does-not-exist.com", 80, timeout=1.0
+    )
     assert result is False
 
 
@@ -50,7 +57,9 @@ def test_check_openrouter_connectivity():
 
 def test_parse_url_for_tcp_check_https():
     """Test URL parsing for HTTPS URLs"""
-    host, port = parse_url_for_tcp_check("https://openrouter.ai/api/v1/chat/completions")
+    host, port = parse_url_for_tcp_check(
+        "https://openrouter.ai/api/v1/chat/completions"
+    )
     assert host == "openrouter.ai"
     assert port == 443
 

@@ -9,12 +9,13 @@ from typing import List
 @dataclass
 class AIConfig:
     """AI model configuration"""
+
     model: str
     api_url: str
     temperature: float
     max_tokens: int
     timeout: int
-    
+
     def __post_init__(self):
         """Validate AI configuration"""
         if not self.model:
@@ -32,11 +33,12 @@ class AIConfig:
 @dataclass
 class FormatConfig:
     """Commit message format configuration"""
+
     max_subject_length: int
     require_body_for_features: bool
     enforce_conventional: bool
     allowed_types: List[str]
-    
+
     def __post_init__(self):
         """Validate format configuration"""
         if self.max_subject_length <= 0:
@@ -48,9 +50,10 @@ class FormatConfig:
 @dataclass
 class DiffConfig:
     """Diff processing configuration"""
+
     context_reserve: int
     char_per_line_ratio: int
-    
+
     def __post_init__(self):
         """Validate diff configuration"""
         if self.context_reserve < 0:
@@ -62,10 +65,11 @@ class DiffConfig:
 @dataclass
 class AppConfig:
     """Complete application configuration"""
+
     ai: AIConfig
     format: FormatConfig
     diff: DiffConfig
-    
+
     def __post_init__(self):
         """Validate complete configuration"""
         if not isinstance(self.ai, AIConfig):

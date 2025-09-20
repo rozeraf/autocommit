@@ -9,6 +9,7 @@ from typing import List, Dict
 @dataclass
 class DiffStats:
     """Statistics about a diff"""
+
     files_changed: int
     lines_added: int
     lines_removed: int
@@ -22,6 +23,7 @@ class DiffStats:
 @dataclass
 class SmartDiff:
     """Smart diff with context analysis"""
+
     content: str
     stats: DiffStats
     context_hints: List[str]

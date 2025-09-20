@@ -16,7 +16,6 @@ You should have received a copy of the GNU General Public License
 along with this program. If not, see <https://www.gnu.org/licenses/>.
 """
 
-import os
 import logging
 from pathlib import Path
 from typing import Optional
@@ -42,14 +41,14 @@ def _find_config_file() -> Optional[Path]:
     if config_path.exists():
         logger.debug(f"Found config.toml in current directory: {config_path}")
         return config_path
-    
+
     # Check home directory
     home_dir = Path.home()
     config_path = home_dir / "config.toml"
     if config_path.exists():
         logger.debug(f"Found config.toml in home directory: {config_path}")
         return config_path
-    
+
     logger.debug("No config.toml found, using defaults")
     return None
 
@@ -59,9 +58,9 @@ def _load_toml_config(config_path: Path) -> dict:
     if not tomllib:
         logger.warning("tomllib or toml library not available, using defaults")
         return {}
-    
+
     try:
-        with open(config_path, 'rb') as f:
+        with open(config_path, "rb") as f:
             config_data = tomllib.load(f)
         logger.debug(f"Loaded config from {config_path}")
         return config_data
@@ -73,43 +72,57 @@ def _load_toml_config(config_path: Path) -> dict:
 def get_config() -> AppConfig:
     """
     Load configuration with fallback to defaults
-    
+
     Returns:
         AppConfig: Complete application configuration
     """
     config_data = {}
-    
+
     # Try to load from config file
     config_path = _find_config_file()
     if config_path:
         config_data = _load_toml_config(config_path)
-    
+
     # Create configuration objects with defaults
     ai_config = AIConfig(
-        model=config_data.get('ai', {}).get('model', 'anthropic/claude-3.5-sonnet'),
-        api_url=config_data.get('ai', {}).get('api_url', 'https://openrouter.ai/api/v1'),
-        temperature=config_data.get('ai', {}).get('temperature', 0.3),
-        max_tokens=config_data.get('ai', {}).get('max_tokens', 1000),
-        timeout=config_data.get('ai', {}).get('timeout', 45)
+        model=config_data.get("ai", {}).get("model", "anthropic/claude-3.5-sonnet"),
+        api_url=config_data.get("ai", {}).get(
+            "api_url", "https://openrouter.ai/api/v1"
+        ),
+        temperature=config_data.get("ai", {}).get("temperature", 0.3),
+        max_tokens=config_data.get("ai", {}).get("max_tokens", 1000),
+        timeout=config_data.get("ai", {}).get("timeout", 45),
     )
-    
+
     format_config = FormatConfig(
-        max_subject_length=config_data.get('format', {}).get('max_subject_length', 70),
-        require_body_for_features=config_data.get('format', {}).get('require_body_for_features', True),
-        enforce_conventional=config_data.get('format', {}).get('enforce_conventional', True),
-        allowed_types=config_data.get('format', {}).get('allowed_types', [
-            'feat', 'fix', 'docs', 'style', 'refactor', 'perf', 
-            'test', 'build', 'ci', 'chore', 'revert'
-        ])
+        max_subject_length=config_data.get("format", {}).get("max_subject_length", 70),
+        require_body_for_features=config_data.get("format", {}).get(
+            "require_body_for_features", True
+        ),
+        enforce_conventional=config_data.get("format", {}).get(
+            "enforce_conventional", True
+        ),
+        allowed_types=config_data.get("format", {}).get(
+            "allowed_types",
+            [
+                "feat",
+                "fix",
+                "docs",
+                "style",
+                "refactor",
+                "perf",
+                "test",
+                "build",
+                "ci",
+                "chore",
+                "revert",
+            ],
+        ),
     )
-    
+
     diff_config = DiffConfig(
-        context_reserve=config_data.get('diff', {}).get('context_reserve', 4000),
-        char_per_line_ratio=config_data.get('diff', {}).get('char_per_line_ratio', 80)
+        context_reserve=config_data.get("diff", {}).get("context_reserve", 4000),
+        char_per_line_ratio=config_data.get("diff", {}).get("char_per_line_ratio", 80),
     )
-    
-    return AppConfig(
-        ai=ai_config,
-        format=format_config,
-        diff=diff_config
-    )
+
+    return AppConfig(ai=ai_config, format=format_config, diff=diff_config)

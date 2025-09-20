@@ -18,15 +18,17 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 import logging
 import subprocess
-from typing import Optional, Tuple
 
 from .config import get_config
 
 logger = logging.getLogger(__name__)
 
-def run_command(cmd_parts: list[str], timeout: int = 30, show_output: bool = False) -> tuple[str, int]:
+
+def run_command(
+    cmd_parts: list[str], timeout: int = 30, show_output: bool = False
+) -> tuple[str, int]:
     """Executes a command as list of arguments and returns the output and return code.
-    
+
     Args:
         cmd_parts: List of command and arguments (e.g., ['git', 'diff', '--cached'])
         show_output: If True, shows output in real-time instead of capturing it
@@ -34,7 +36,7 @@ def run_command(cmd_parts: list[str], timeout: int = 30, show_output: bool = Fal
     """
     error_occurred = False
     exit_code = 1
-    
+
     try:
         if show_output:
             # Show real-time output for commands that may have interactive output (e.g., git hooks)
@@ -44,19 +46,15 @@ def run_command(cmd_parts: list[str], timeout: int = 30, show_output: bool = Fal
                 text=True,
                 check=False,
                 timeout=timeout,
-                stderr=subprocess.STDOUT if show_output else None
+                stderr=subprocess.STDOUT if show_output else None,
             )
             return "", result.returncode
         else:
             result = subprocess.run(
-                cmd_parts,
-                capture_output=True,
-                text=True,
-                check=False,
-                timeout=timeout
+                cmd_parts, capture_output=True, text=True, check=False, timeout=timeout
             )
             return result.stdout.strip(), result.returncode
-            
+
     except subprocess.TimeoutExpired:
         error_msg = f"Command timed out after {timeout}s: {' '.join(cmd_parts)}"
         logger.error(f"Error: {error_msg}")
@@ -78,10 +76,11 @@ def run_command(cmd_parts: list[str], timeout: int = 30, show_output: bool = Fal
         error_msg = f"Unexpected error executing {' '.join(cmd_parts)}: {type(e).__name__}: {str(e)}"
         logger.error(f"Error: {error_msg}")
         import traceback
+
         traceback.print_exc()
         exit_code = 1
         error_occurred = True
-    
+
     # Return empty string for stdout when show_output=True or error occurred
     # This prevents error messages from being passed to shell
     if show_output or error_occurred:
@@ -104,7 +103,7 @@ def get_git_diff() -> str | None:
         return None
 
     logger.debug(f"Staged files: {staged_files.replace(chr(10), ', ')}")
-    
+
     diff, code = run_command(["git", "diff", "--cached"])
     if code != 0:
         logger.error("Error getting diff")
@@ -116,25 +115,23 @@ def get_git_diff() -> str | None:
 def commit_changes(message: str, description: str | None = None) -> bool:
     """Creates a commit with the specified message"""
     logger.debug("\nCreating commit...")
-    
+
     # Use subject as main message, description as body
     if description:
         # Git commit format: subject on first line, body after blank line
         full_message = f"{message}\n\n{description}"
     else:
         full_message = message
-    
+
     logger.debug(f"Commit subject: {message}")
     if description:
         logger.debug(f"Commit body: {description[:100]}...")
-    
+
     # Use show_output=True to see git hooks output, and longer timeout for commit operations
     _, code = run_command(
-        ["git", "commit", "-m", full_message], 
-        show_output=True, 
-        timeout=120
+        ["git", "commit", "-m", full_message], show_output=True, timeout=120
     )
-    
+
     if code == 0:
         logger.info("Commit created successfully")
         return True
@@ -146,11 +143,11 @@ def commit_changes(message: str, description: str | None = None) -> bool:
 def calculate_diff_limits(context_length: int | None) -> tuple[int, int]:
     """Calculate limits for diff based on model context length"""
     config = get_config()
-    
+
     # Default values if model information is unavailable
     char_limit = 8000  # Fixed default
     line_limit = char_limit // config.diff.char_per_line_ratio
-    
+
     if context_length:
         # Reserve space for prompt and response
         available_for_diff = context_length - config.diff.context_reserve
@@ -159,20 +156,24 @@ def calculate_diff_limits(context_length: int | None) -> tuple[int, int]:
             char_limit = int(available_for_diff * 0.8)
             # Use configured ratio for line calculation
             line_limit = char_limit // config.diff.char_per_line_ratio
-        logger.debug(f"Dynamic limits (context {context_length}): {line_limit} lines, {char_limit} characters")
+        logger.debug(
+            f"Dynamic limits (context {context_length}): {line_limit} lines, {char_limit} characters"
+        )
     else:
-        logger.debug(f"Using default limits: {line_limit} lines, {char_limit} characters")
-    
+        logger.debug(
+            f"Using default limits: {line_limit} lines, {char_limit} characters"
+        )
+
     return line_limit, char_limit
 
 
 def get_smart_diff(diff: str, context_length: int | None) -> str:
     """Gets a smart diff that respects context length limits (legacy function)"""
     from .parsers import DiffParser
-    
+
     if not diff:
         return ""
-    
+
     diff_parser = DiffParser()
     smart_diff_result = diff_parser.parse_diff(diff, context_length)
     return smart_diff_result.content

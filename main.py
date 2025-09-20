@@ -36,7 +36,11 @@ load_dotenv()
 def setup_logging(debug: bool = False):
     """Configure logging based on debug flag"""
     level = logging.DEBUG if debug else logging.INFO
-    format_str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s" if debug else "%(message)s"
+    format_str = (
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        if debug
+        else "%(message)s"
+    )
 
     # Reset any existing handlers
     root = logging.getLogger()
@@ -45,27 +49,38 @@ def setup_logging(debug: bool = False):
             root.removeHandler(handler)
 
     logging.basicConfig(
-        level=level,
-        format=format_str,
-        handlers=[logging.StreamHandler(sys.stdout)]
+        level=level, format=format_str, handlers=[logging.StreamHandler(sys.stdout)]
     )
 
+
 logger = logging.getLogger(__name__)
-
-
-
 
 
 def main():
     """Main function"""
     colorama_init(autoreset=True)
-    parser = argparse.ArgumentParser(description="Git Auto Commit - AI-powered commit message generation")
-    parser.add_argument("-d", "--debug", action="store_true", help="Enable debug logging")
+    parser = argparse.ArgumentParser(
+        description="Git Auto Commit - AI-powered commit message generation"
+    )
+    parser.add_argument(
+        "-d", "--debug", action="store_true", help="Enable debug logging"
+    )
     parser.add_argument("-y", "--yes", action="store_true", help="Skip confirmation")
-    parser.add_argument("--dry-run", action="store_true", help="Generate and print commit message without committing")
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Generate and print commit message without committing",
+    )
     parser.add_argument("--test-api", action="store_true", help="Test API connection")
-    parser.add_argument("--test", action="store_true", help="Run a series of self-tests to check application health")
-    parser.add_argument("--model", help="Override AI model from .env file (e.g., anthropic/claude-3.5-sonnet)")
+    parser.add_argument(
+        "--test",
+        action="store_true",
+        help="Run a series of self-tests to check application health",
+    )
+    parser.add_argument(
+        "--model",
+        help="Override AI model from .env file (e.g., anthropic/claude-3.5-sonnet)",
+    )
     args = parser.parse_args()
 
     setup_logging(args.debug)
@@ -73,39 +88,65 @@ def main():
     if args.test:
         # Prepare test results
         test_results = []
-        
+
         # 1. Check for git repo
         _, code = git_utils.run_command(["git", "rev-parse", "--git-dir"])
-        test_results.append({
-            "name": "Checking for Git repository",
-            "passed": code == 0,
-            "message": "Git repository found" if code == 0 else "Not a Git repository"
-        })
+        test_results.append(
+            {
+                "name": "Checking for Git repository",
+                "passed": code == 0,
+                "message": (
+                    "Git repository found" if code == 0 else "Not a Git repository"
+                ),
+            }
+        )
 
         # 2. Check for API Key
         api_key = os.getenv("OPENROUTER_API_KEY")
-        test_results.append({
-            "name": "Checking for OPENROUTER_API_KEY",
-            "passed": bool(api_key),
-            "message": "OPENROUTER_API_KEY is set" if api_key else "OPENROUTER_API_KEY environment variable not set"
-        })
+        test_results.append(
+            {
+                "name": "Checking for OPENROUTER_API_KEY",
+                "passed": bool(api_key),
+                "message": (
+                    "OPENROUTER_API_KEY is set"
+                    if api_key
+                    else "OPENROUTER_API_KEY environment variable not set"
+                ),
+            }
+        )
 
         # 3. Check git_utils.get_git_diff functionality
-        staged_files, code = git_utils.run_command(["git", "diff", "--cached", "--name-only"])
-        test_results.append({
-            "name": "Checking for staged files",
-            "passed": code == 0,
-            "message": "Can check for staged files" if code == 0 else "Command 'git diff --cached --name-only' failed",
-            "note": "No files are currently staged" if code == 0 and not staged_files.strip() else None
-        })
+        staged_files, code = git_utils.run_command(
+            ["git", "diff", "--cached", "--name-only"]
+        )
+        test_results.append(
+            {
+                "name": "Checking for staged files",
+                "passed": code == 0,
+                "message": (
+                    "Can check for staged files"
+                    if code == 0
+                    else "Command 'git diff --cached --name-only' failed"
+                ),
+                "note": (
+                    "No files are currently staged"
+                    if code == 0 and not staged_files.strip()
+                    else None
+                ),
+            }
+        )
 
         # 4. Run unit tests
         _, code = git_utils.run_command(["pytest"], show_output=True)
-        test_results.append({
-            "name": "Running unit tests with pytest",
-            "passed": code == 0,
-            "message": "Unit test suite passed" if code == 0 else "Unit test suite failed"
-        })
+        test_results.append(
+            {
+                "name": "Running unit tests with pytest",
+                "passed": code == 0,
+                "message": (
+                    "Unit test suite passed" if code == 0 else "Unit test suite failed"
+                ),
+            }
+        )
 
         all_passed = ui.show_test_results(test_results)
         sys.exit(0 if all_passed else 1)
@@ -120,7 +161,11 @@ def main():
         sys.exit(1)
 
     config = get_config()
-    model_name = args.model or config.ai.model or os.getenv("OPENROUTER_MODEL", "anthropic/claude-3.5-sonnet")
+    model_name = (
+        args.model
+        or config.ai.model
+        or os.getenv("OPENROUTER_MODEL", "anthropic/claude-3.5-sonnet")
+    )
     if args.debug:
         logger.debug(f"Using model: {model_name}")
 
@@ -131,15 +176,22 @@ def main():
                 return
 
             # Initialize spinner with consistent styling
-            init_spinner = Halo(text=f"{Fore.CYAN}Initializing model{Style.RESET_ALL} '{model_name}'", spinner="dots")
+            init_spinner = Halo(
+                text=f"{Fore.CYAN}Initializing model{Style.RESET_ALL} '{model_name}'",
+                spinner="dots",
+            )
             init_spinner.start()
-            
+
             model_info = client.get_model_info(model_name)
             if model_info:
                 model_details = f"({model_info.context_length or 'unknown'} tokens)"
-                init_spinner.succeed(f"{Fore.GREEN}Model initialized{Style.RESET_ALL} {Fore.CYAN}{model_details}{Style.RESET_ALL}")
+                init_spinner.succeed(
+                    f"{Fore.GREEN}Model initialized{Style.RESET_ALL} {Fore.CYAN}{model_details}{Style.RESET_ALL}"
+                )
             else:
-                init_spinner.fail(f"{Fore.RED}Failed to initialize model{Style.RESET_ALL}")
+                init_spinner.fail(
+                    f"{Fore.RED}Failed to initialize model{Style.RESET_ALL}"
+                )
                 sys.exit(1)
 
             # Check for staged changes with nice formatting
@@ -152,25 +204,36 @@ def main():
 
             while True:
                 # Show AI thinking animation
-                spinner = Halo(text=f"{Fore.CYAN}Analyzing changes{Style.RESET_ALL} and generating commit message", spinner="dots")
+                spinner = Halo(
+                    text=f"{Fore.CYAN}Analyzing changes{Style.RESET_ALL} and generating commit message",
+                    spinner="dots",
+                )
                 spinner.start()
                 result = client.generate_commit_message(diff, model_info)
-                
+
                 if result:
                     commit_msg = result.subject
                     description = result.description
-                    word_count = len(commit_msg.split()) + (len(description.split()) if description else 0)
-                    char_count = len(commit_msg) + (len(description) if description else 0)
-                    
+                    word_count = len(commit_msg.split()) + (
+                        len(description.split()) if description else 0
+                    )
+                    char_count = len(commit_msg) + (
+                        len(description) if description else 0
+                    )
+
                     stats = f"[{word_count} words, {char_count} chars]"
-                    spinner.succeed(f"{Fore.GREEN}Commit message generated{Style.RESET_ALL} {Fore.CYAN}{stats}{Style.RESET_ALL}")
-                    
+                    spinner.succeed(
+                        f"{Fore.GREEN}Commit message generated{Style.RESET_ALL} {Fore.CYAN}{stats}{Style.RESET_ALL}"
+                    )
+
                     if args.debug:
                         logger.debug(f"Subject: '{commit_msg}'")
                         if description:
                             logger.debug(f"Body: '{description[:100]}...'")
                 else:
-                    spinner.fail(f"{Fore.RED}Failed to generate commit message{Style.RESET_ALL}")
+                    spinner.fail(
+                        f"{Fore.RED}Failed to generate commit message{Style.RESET_ALL}"
+                    )
 
                 if not result:
                     ui.show_error("Try: python3 main.py --test-api")
@@ -187,7 +250,7 @@ def main():
                     sys.exit(0)
 
                 confirmation = ui.show_confirmation(commit_msg, description, args.yes)
-                
+
                 if confirmation is True:
                     # User confirmed - create commit
                     success = git_utils.commit_changes(commit_msg, description)
