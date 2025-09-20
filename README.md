@@ -61,7 +61,7 @@ Create `config.toml` in the project root to customize settings:
 model = "anthropic/claude-3.5-sonnet"
 api_url = "https://openrouter.ai/api/v1"
 temperature = 0.4
-max_tokens = 250
+max_tokens = 1000
 timeout = 45
 
 [format]

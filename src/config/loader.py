@@ -86,7 +86,7 @@ def get_config() -> AppConfig:
         model=config_data.get('ai', {}).get('model', 'anthropic/claude-3.5-sonnet'),
         api_url=config_data.get('ai', {}).get('api_url', 'https://openrouter.ai/api/v1'),
         temperature=config_data.get('ai', {}).get('temperature', 0.4),
-        max_tokens=config_data.get('ai', {}).get('max_tokens', 250),
+        max_tokens=config_data.get('ai', {}).get('max_tokens', 1000),
         timeout=config_data.get('ai', {}).get('timeout', 45)
     )
     
