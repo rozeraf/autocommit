@@ -133,19 +133,10 @@ autocommit/
 ├── src/                    # Core package
 │   ├── __init__.py
 │   ├── api/                # API client modules
-│   │   ├── __init__.py
-│   │   ├── client.py       # HTTP client
-│   │   ├── models.py       # Data models
-│   │   ├── openrouter.py   # OpenRouter integration
-│   │   └── tcp_check.py   # Connectivity checks
 │   ├── config/             # Configuration system
-│   │   ├── __init__.py
-│   │   ├── loader.py       # TOML config loader
-│   │   └── models.py       # Config data classes
-│   ├── parsers/            # Message parsing
-│   │   ├── __init__.py
-│   │   ├── commit_parser.py # Commit message parsing
-│   │   └── diff_parser.py  # Diff processing
+│   ├── context/            # Context detection module
+│   ├── models/             # Data models (dataclasses)
+│   ├── parsers/            # Message and diff parsing
 │   ├── git_utils.py        # Git operations & smart diff
 │   └── ui.py               # Rich terminal interface
 ├── tests/                  # Test suite
@@ -201,6 +192,43 @@ For detailed information about changes and version history, see [CHANGELOG.md](C
 ## License
 
 GPL-3.0 - See [LICENSE](LICENSE) file for details.
+
+## Screenshots
+
+The application features a beautiful terminal interface with:
+- Styled commit preview boxes
+- Interactive confirmation prompts
+- Loading spinners with progress feedback
+- Colored output and statistics
+- Responsive terminal layouts
+
+## Advanced Usage
+
+```bash
+# Use different AI models
+python3 main.py --model anthropic/claude-3.5-sonnet
+python3 main.py --model openrouter/sonoma-dusk-alpha
+
+# Debug mode for troubleshooting
+python3 main.py --debug
+
+# Skip confirmation for automation
+python3 main.py -y
+
+# Generate message without committing
+python3 main.py --dry-run
+```
+
+## Performance
+
+- **Fast**: Optimized API calls with smart diff truncation
+- **Reliable**: Comprehensive error handling and retries
+- **Smart**: Context-aware parsing for complex AI responses
+- **Responsive**: Terminal-adaptive UI that works on any screen size
+
+---
+
+**Status: Production Ready** | **Python: 3.11+** | **License: GPL-3.0** | **Version: 2.0+**- See [LICENSE](LICENSE) file for details.
 
 ## Screenshots
 

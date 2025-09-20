@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2025-09-20
+
+### Added
+- Context detection system (`src/context/detector.py`) to analyze changes and provide hints to the AI.
+- New CLI arguments to control commit context:
+  - `-c, --context`: Use a named preset from the configuration (e.g., `wip`).
+  - `-i, --hint`: Provide a one-time, custom hint directly to the AI.
+- Configuration for context presets and keywords in `config.toml` under `[context]` and `[context.presets]`.
+- System prompt is now configurable in `config.toml` under `[ai.prompts]`.
+
+### Changed
+- The AI prompt now includes a `Context:` section to make the model aware of hints.
+- `main.py` logic was updated to handle context priority: custom hint > preset context > auto-detection.
+- `OpenRouterClient` was refactored to accept and use the prompt context.
+
+
 ## [2.1.0] - 2025-09-20
 
 ### Added

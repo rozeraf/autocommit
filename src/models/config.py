@@ -69,7 +69,6 @@ class ContextConfig:
 
     wip_keywords: List[str]
     auto_detect: bool
-    presets: Dict[str, str]
 
 
 @dataclass

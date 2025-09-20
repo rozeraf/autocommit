@@ -215,22 +215,24 @@ def main():
                 sys.exit(1)
 
             # Determine context based on priority: hint > context > auto-context
-            prompt_context_str = None
+            context_hints = []
             if args.hint:
-                prompt_context_str = args.hint
+                context_hints.append(args.hint)
             elif args.context:
-                prompt_context_str = config.context.presets.get(args.context.lower())
-                if not prompt_context_str:
-                    ui.show_warning(f"Preset context '{args.context}' not found.")
+                context_hints.append(args.context.lower())
             elif config.context.auto_detect and args.auto_context:
                 diff_parser = DiffParser()
                 smart_diff = diff_parser.parse_diff(
                     diff, model_info.context_length if model_info else None
                 )
                 detector = ContextDetector(config.context.wip_keywords)
-                hints = detector.detect(diff, smart_diff.stats)
-                if hints:
-                    prompt_context_str = f"Auto-detected context: {', '.join(hints)}"
+                context_hints.extend(detector.detect(diff, smart_diff.stats))
+
+            prompt_context_str = None
+            if context_hints:
+                prompt_context_str = (
+                    f"Context hints: {', '.join(sorted(list(set(context_hints))))}"
+                )
 
             if prompt_context_str and args.debug:
                 logger.debug(f"Using context: {prompt_context_str}")

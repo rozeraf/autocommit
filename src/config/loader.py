@@ -137,7 +137,6 @@ def get_config() -> AppConfig:
             "wip_keywords", ["TODO", "FIXME", "WIP", "HACK", "XXX", "NOTE"]
         ),
         auto_detect=config_data.get("context", {}).get("auto_detect", True),
-        presets=config_data.get("context", {}).get("presets", {}),
     )
 
     return AppConfig(
