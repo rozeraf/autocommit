@@ -141,23 +141,6 @@ index 1111111..2222222 100644
     assert result.stats.has_dependencies
 
 
-def test_parse_diff_with_wip_keywords():
-    """Test parsing diff with WIP keywords"""
-    diff = """diff --git a/src/main.py b/src/main.py
-index 1111111..2222222 100644
---- a/src/main.py
-+++ b/src/main.py
-@@ -1,2 +1,3 @@
- def main():
-+    # TODO: implement this function
-     return 0
-"""
-    parser = DiffParser()
-    result = parser.parse_diff(diff)
-
-    assert "Contains TODO keyword" in result.context_hints
-
-
 def test_parse_large_diff():
     """Test parsing large diff"""
     # Create a large diff

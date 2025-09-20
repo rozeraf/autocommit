@@ -49,9 +49,6 @@ class DiffParser:
         r"Cargo\.toml",
     ]
 
-    # Context keywords
-    WIP_KEYWORDS = ["TODO", "FIXME", "WIP", "HACK", "XXX", "NOTE"]
-
     def __init__(self, max_lines: int = 100, max_chars: int = 8000):
         """
         Initialize diff parser
@@ -83,7 +80,6 @@ class DiffParser:
 
         # Analyze the diff
         stats = self._analyze_diff_stats(diff)
-        context_hints = self._extract_context_hints(diff)
 
         # Create smart diff content
         smart_content = self._create_smart_diff(diff)
@@ -96,7 +92,6 @@ class DiffParser:
         return SmartDiff(
             content=smart_content,
             stats=stats,
-            context_hints=context_hints,
             is_large=is_large,
         )
 
@@ -114,7 +109,6 @@ class DiffParser:
                 has_config=False,
                 has_dependencies=False,
             ),
-            context_hints=[],
             is_large=False,
         )
 

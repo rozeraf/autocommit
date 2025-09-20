@@ -3,7 +3,7 @@ Diff models
 """
 
 from dataclasses import dataclass
-from typing import List, Dict
+from typing import Dict
 
 
 @dataclass
@@ -26,5 +26,4 @@ class SmartDiff:
 
     content: str
     stats: DiffStats
-    context_hints: List[str]
     is_large: bool

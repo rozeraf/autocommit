@@ -28,7 +28,7 @@ from ..config import get_config
 logger = logging.getLogger(__name__)
 
 
-DEFAULT_SYSTEM_PROMPT = '''Your task is to generate a commit message based on the provided diff, following the Conventional Commits specification.
+DEFAULT_SYSTEM_PROMPT = """Your task is to generate a commit message based on the provided diff, following the Conventional Commits specification.
 
 RULES:
 1. Output ONLY the commit message text - no explanations, markdown blocks, or extra text.
@@ -66,7 +66,7 @@ RULES:
    - Subject must be imperative mood
    - No period at end of subject
    - Body separated by blank line
-   - Each bullet point is a complete thought'''
+   - Each bullet point is a complete thought"""
 
 
 class OpenRouterClient:
@@ -175,7 +175,9 @@ class OpenRouterClient:
         config = get_config()
 
         # Get the prompt from config, with a fallback to the default
-        system_prompt = (config.ai.prompts or {}).get('openrouter', DEFAULT_SYSTEM_PROMPT)
+        system_prompt = (config.ai.prompts or {}).get(
+            "openrouter", DEFAULT_SYSTEM_PROMPT
+        )
 
         payload = {
             "model": self.model,
