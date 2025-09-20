@@ -22,7 +22,7 @@ import os
 from typing import Optional, Tuple
 
 from .client import HTTPClient
-from .models import ModelInfo, CommitMessage
+from ..models import ModelInfo, CommitMessage
 from ..config import get_config
 
 logger = logging.getLogger(__name__)

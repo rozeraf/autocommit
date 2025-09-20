@@ -29,7 +29,7 @@ except ImportError:
     except ImportError:
         tomllib = None
 
-from .models import AIConfig, FormatConfig, DiffConfig, AppConfig
+from ..models.config import AIConfig, FormatConfig, DiffConfig, AppConfig
 
 logger = logging.getLogger(__name__)
 
