@@ -54,13 +54,13 @@ Get your API key from https://openrouter.ai.
 
 The application uses `config.toml` for configuration. If not present, defaults are used.
 
-Create `config.toml` in the project root to customize settings:
+Configure `config.toml` in the project root to customize settings. Example:
 
 ```toml
 [ai]
-model = "anthropic/claude-3.5-sonnet"
+model = "google/gemini-2.0-flash-exp:free"
 api_url = "https://openrouter.ai/api/v1"
-temperature = 0.4
+temperature = 0.3
 max_tokens = 1000
 timeout = 45
 
