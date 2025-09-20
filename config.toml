@@ -5,23 +5,46 @@ temperature = 0.3
 max_tokens = 1000
 timeout = 45
 
+[format]
+max_subject_length = 70
+require_body_for_features = true
+enforce_conventional = true
+allowed_types = ["feat", "fix", "docs", "style", "refactor", "perf", "test", "build", "ci", "chore", "revert"]
+
+[diff]
+context_reserve = 4000
+char_per_line_ratio = 80
+
+[context]
+wip_keywords = ["TODO", "FIXME", "WIP", "HACK", "XXX", "NOTE"]
+auto_detect = true
+
+[context.presets]
+wip = "Work in progress - saving current state"
+checkpoint = "Partial implementation checkpoint"
+breaking = "Contains breaking changes"
+hotfix = "Urgent production fix"
+experimental = "Experimental feature implementation"
+
 [ai.prompts]
 openrouter = '''Your task is to generate a commit message based on the provided diff, following the Conventional Commits specification.
 
 RULES:
 1. Output ONLY the commit message text - no explanations, markdown blocks, or extra text.
 
-2. Format: `type(scope): subject`
+2. A `Context:` line may be provided before the code changes. This line gives crucial hints (e.g., 'Work in progress', 'tests_modified'). You MUST use this context to inform the commit message style and content. For example, a 'wip' context might lead to a 'chore(wip): ...' commit.
+
+3. Format: `type(scope): subject`
    - Subject: max 50 chars, imperative mood ("add", not "added")
    - Body: detailed bullet points if needed
    - Footer: BREAKING CHANGE if applicable
 
-3. Scope selection:
+4. Scope selection:
    - Use specific module/component names when possible
    - Examples: api, ui, config, models, tests, git_utils
    - Omit scope only for broad changes across multiple areas
 
-4. Types (strict priority order):
+5. Types (strict priority order):
    - `feat`: New features or capabilities
    - `fix`: Bug fixes and error corrections  
    - `refactor`: Code restructuring without behavior change
@@ -34,24 +57,14 @@ RULES:
    - `chore`: Maintenance tasks
    - `revert`: Reverting previous commits
 
-5. Body structure (when needed):
+6. Body structure (when needed):
    - Use bullet points with hyphens (-)
    - Start each point with action verb
    - Group related changes logically
    - Explain WHY for complex changes
 
-6. Quality checks:
+7. Quality checks:
    - Subject must be imperative mood
    - No period at end of subject
    - Body separated by blank line
    - Each bullet point is a complete thought'''
-
-[format]
-max_subject_length = 70
-require_body_for_features = true
-enforce_conventional = true
-allowed_types = ["feat", "fix", "docs", "style", "refactor", "perf", "test", "build", "ci", "chore", "revert"]
-
-[diff]
-context_reserve = 4000
-char_per_line_ratio = 80

@@ -13,7 +13,9 @@ logger = logging.getLogger(__name__)
 class ContextDetector:
     """Detects context from git diff and stats"""
 
-    WIP_KEYWORDS = ["TODO", "FIXME", "WIP", "HACK", "XXX", "NOTE"]
+    def __init__(self, wip_keywords: List[str]):
+        """Initialize the detector with configurable keywords."""
+        self.wip_keywords = [kw.upper() for kw in wip_keywords]
 
     def detect(self, diff: str, stats: DiffStats) -> List[str]:
         """
@@ -32,7 +34,7 @@ class ContextDetector:
         for line in diff.split("\n"):
             if line.startswith("+") and not line.startswith("+++"):
                 content_upper = line[1:].upper()
-                for keyword in self.WIP_KEYWORDS:
+                for keyword in self.wip_keywords:
                     if keyword in content_upper:
                         hints.append(f"wip_keyword_{keyword.lower()}")
                         break  # Move to next line once a keyword is found

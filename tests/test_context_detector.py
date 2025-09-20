@@ -8,7 +8,7 @@ from src.models.diff import DiffStats
 
 def test_detect_wip_keywords():
     """Test that WIP keywords like TODO are detected from the diff."""
-    detector = ContextDetector()
+    detector = ContextDetector(wip_keywords=["TODO", "FIXME", "WIP"])
     diff = """diff --git a/src/main.py b/src/main.py
 --- a/src/main.py
 +++ b/src/main.py
@@ -35,7 +35,7 @@ def test_detect_wip_keywords():
 
 def test_detect_from_stats():
     """Test that context is detected from DiffStats."""
-    detector = ContextDetector()
+    detector = ContextDetector(wip_keywords=["TODO", "FIXME", "WIP"])
     diff = ""  # Empty diff
     stats = DiffStats(
         files_changed=4,
@@ -58,7 +58,7 @@ def test_detect_from_stats():
 
 def test_detect_large_feature():
     """Test that a large number of additions is detected as a feature."""
-    detector = ContextDetector()
+    detector = ContextDetector(wip_keywords=["TODO", "FIXME", "WIP"])
     diff = ""  # Empty diff
     stats = DiffStats(
         files_changed=1,

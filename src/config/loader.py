@@ -28,7 +28,13 @@ except ImportError:
     except ImportError:
         tomllib = None
 
-from ..models.config import AIConfig, FormatConfig, DiffConfig, AppConfig
+from ..models.config import (
+    AIConfig,
+    FormatConfig,
+    DiffConfig,
+    ContextConfig,
+    AppConfig,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -126,4 +132,14 @@ def get_config() -> AppConfig:
         char_per_line_ratio=config_data.get("diff", {}).get("char_per_line_ratio", 80),
     )
 
-    return AppConfig(ai=ai_config, format=format_config, diff=diff_config)
+    context_config = ContextConfig(
+        wip_keywords=config_data.get("context", {}).get(
+            "wip_keywords", ["TODO", "FIXME", "WIP", "HACK", "XXX", "NOTE"]
+        ),
+        auto_detect=config_data.get("context", {}).get("auto_detect", True),
+        presets=config_data.get("context", {}).get("presets", {}),
+    )
+
+    return AppConfig(
+        ai=ai_config, format=format_config, diff=diff_config, context=context_config
+    )

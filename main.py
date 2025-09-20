@@ -219,17 +219,15 @@ def main():
             if args.hint:
                 prompt_context_str = args.hint
             elif args.context:
-                # This will be expanded in step 2.3 to use presets from config
-                context_presets = {"wip": "This is a work-in-progress commit."}
-                prompt_context_str = context_presets.get(args.context.lower())
+                prompt_context_str = config.context.presets.get(args.context.lower())
                 if not prompt_context_str:
                     ui.show_warning(f"Preset context '{args.context}' not found.")
-            elif args.auto_context:
+            elif config.context.auto_detect and args.auto_context:
                 diff_parser = DiffParser()
                 smart_diff = diff_parser.parse_diff(
                     diff, model_info.context_length if model_info else None
                 )
-                detector = ContextDetector()
+                detector = ContextDetector(config.context.wip_keywords)
                 hints = detector.detect(diff, smart_diff.stats)
                 if hints:
                     prompt_context_str = f"Auto-detected context: {', '.join(hints)}"

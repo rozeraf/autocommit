@@ -64,12 +64,22 @@ class DiffConfig:
 
 
 @dataclass
+class ContextConfig:
+    """Context detection configuration"""
+
+    wip_keywords: List[str]
+    auto_detect: bool
+    presets: Dict[str, str]
+
+
+@dataclass
 class AppConfig:
     """Complete application configuration"""
 
     ai: AIConfig
     format: FormatConfig
     diff: DiffConfig
+    context: ContextConfig
 
     def __post_init__(self):
         """Validate complete configuration"""
@@ -79,3 +89,5 @@ class AppConfig:
             raise ValueError("Format config must be FormatConfig instance")
         if not isinstance(self.diff, DiffConfig):
             raise ValueError("Diff config must be DiffConfig instance")
+        if not isinstance(self.context, ContextConfig):
+            raise ValueError("Context config must be ContextConfig instance")
