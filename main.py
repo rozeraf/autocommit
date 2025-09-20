@@ -29,6 +29,8 @@ from halo import Halo
 
 from src import api, git_utils, ui
 from src.config import get_config
+from src.context.detector import ContextDetector
+from src.parsers.diff_parser import DiffParser
 
 load_dotenv()
 
@@ -80,6 +82,16 @@ def main():
     parser.add_argument(
         "--model",
         help="Override AI model from .env file (e.g., anthropic/claude-3.5-sonnet)",
+    )
+    parser.add_argument(
+        "-c", "--context", help="Provide a preset context for the commit (e.g., 'wip')"
+    )
+    parser.add_argument("-i", "--hint", help="Provide a custom hint to the AI model")
+    parser.add_argument(
+        "--auto-context",
+        action="store_true",
+        default=True,
+        help="Enable auto-detection of context from changes (default: True)",
     )
     args = parser.parse_args()
 
@@ -202,6 +214,29 @@ def main():
                 ui.show_info("git add -p # to stage specific changes")
                 sys.exit(1)
 
+            # Determine context based on priority: hint > context > auto-context
+            prompt_context_str = None
+            if args.hint:
+                prompt_context_str = args.hint
+            elif args.context:
+                # This will be expanded in step 2.3 to use presets from config
+                context_presets = {"wip": "This is a work-in-progress commit."}
+                prompt_context_str = context_presets.get(args.context.lower())
+                if not prompt_context_str:
+                    ui.show_warning(f"Preset context '{args.context}' not found.")
+            elif args.auto_context:
+                diff_parser = DiffParser()
+                smart_diff = diff_parser.parse_diff(
+                    diff, model_info.context_length if model_info else None
+                )
+                detector = ContextDetector()
+                hints = detector.detect(diff, smart_diff.stats)
+                if hints:
+                    prompt_context_str = f"Auto-detected context: {', '.join(hints)}"
+
+            if prompt_context_str and args.debug:
+                logger.debug(f"Using context: {prompt_context_str}")
+
             while True:
                 # Show AI thinking animation
                 spinner = Halo(
@@ -209,7 +244,9 @@ def main():
                     spinner="dots",
                 )
                 spinner.start()
-                result = client.generate_commit_message(diff, model_info)
+                result = client.generate_commit_message(
+                    diff, model_info, prompt_context=prompt_context_str
+                )
 
                 if result:
                     commit_msg = result.subject

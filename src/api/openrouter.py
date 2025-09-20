@@ -147,7 +147,10 @@ class OpenRouterClient:
             return None
 
     def generate_commit_message(
-        self, diff: str, model_info: Optional[ModelInfo] = None
+        self,
+        diff: str,
+        model_info: Optional[ModelInfo] = None,
+        prompt_context: Optional[str] = None,
     ) -> Optional[CommitMessage]:
         """Generate a commit message via the OpenRouter API"""
         if self.api_key:
@@ -179,6 +182,12 @@ class OpenRouterClient:
             "openrouter", DEFAULT_SYSTEM_PROMPT
         )
 
+        user_content = f"Create a commit message for these changes:\n{smart_diff}"
+        if prompt_context:
+            user_content = (
+                f"An important context to consider: {prompt_context}\n\n{user_content}"
+            )
+
         payload = {
             "model": self.model,
             "messages": [
@@ -188,7 +197,7 @@ class OpenRouterClient:
                 },
                 {
                     "role": "user",
-                    "content": f"Create a commit message for these changes:\n{smart_diff}",
+                    "content": user_content,
                 },
             ],
             "max_tokens": config.ai.max_tokens,
