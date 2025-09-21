@@ -176,7 +176,7 @@ def main():
     model_name = (
         args.model
         or config.ai.model
-        or os.getenv("OPENROUTER_MODEL", "anthropic/claude-3.5-sonnet")
+        or os.getenv("OPENROUTER_MODEL", "deepseek/deepseek-chat-v3.1:free")
     )
     if args.debug:
         logger.debug(f"Using model: {model_name}")

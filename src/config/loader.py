@@ -40,20 +40,24 @@ logger = logging.getLogger(__name__)
 
 
 def _find_config_file() -> Optional[Path]:
-    """Find config.toml file in current directory, then home directory"""
-    # Check current directory first
-    current_dir = Path.cwd()
-    config_path = current_dir / "config.toml"
-    if config_path.exists():
-        logger.debug(f"Found config.toml in current directory: {config_path}")
-        return config_path
+    """Find config.toml file in project root, current directory, then home directory"""
+    # Get the path to the directory of the current script
+    script_dir = Path(__file__).parent
+    # project_root is 3 levels up from src/config/loader.py
+    project_root = script_dir.parent.parent.parent
 
-    # Check home directory
-    home_dir = Path.home()
-    config_path = home_dir / "config.toml"
-    if config_path.exists():
-        logger.debug(f"Found config.toml in home directory: {config_path}")
-        return config_path
+    # Define search paths
+    search_paths = [
+        project_root,
+        Path.cwd(),
+        Path.home(),
+    ]
+
+    for path in search_paths:
+        config_path = path / "config.toml"
+        if config_path.exists():
+            logger.debug(f"Found config.toml in: {config_path}")
+            return config_path
 
     logger.debug("No config.toml found, using defaults")
     return None
@@ -91,7 +95,9 @@ def get_config() -> AppConfig:
 
     # Create configuration objects with defaults
     ai_config = AIConfig(
-        model=config_data.get("ai", {}).get("model", "anthropic/claude-3.5-sonnet"),
+        model=config_data.get("ai", {}).get(
+            "model", "deepseek/deepseek-chat-v3.1:free"
+        ),
         api_url=config_data.get("ai", {}).get(
             "api_url", "https://openrouter.ai/api/v1"
         ),
