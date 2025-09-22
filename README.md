@@ -212,7 +212,7 @@ python3 main.py --model openrouter/sonoma-dusk-alpha
 # Debug mode for troubleshooting
 python3 main.py --debug
 
-# Skip confirmation for automation
+# Skip confirmation
 python3 main.py -y
 
 # Generate message without committing
