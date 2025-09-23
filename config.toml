@@ -1,5 +1,5 @@
 [ai]
-model = "deepseek/deepseek-chat-v3.1:free"
+model = "x-ai/grok-4-fast:free"
 api_url = "https://openrouter.ai/api/v1"
 temperature = 0.3
 max_tokens = 1000
