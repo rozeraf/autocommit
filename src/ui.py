@@ -88,7 +88,7 @@ def show_confirmation(
 
 
 def _format_description(description: str) -> list[str]:
-    """Format description into structured sections"""
+    """Formats the commit description into structured sections with headers."""
     desc_lines = []
     changes = []
     details = []

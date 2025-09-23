@@ -23,7 +23,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def check_tcp_connection(host: str, port: int, timeout: float = 5.0) -> bool:
+def check_tcp_connection(host: str, port: int, timeout: float = 4.0) -> bool:
     """
     Check if TCP connection to host:port is possible
 
