@@ -4,13 +4,19 @@ API module for Git Auto Commit
 This module provides HTTP client functionality and OpenRouter API integration.
 """
 
+from .base import BaseAIProvider
 from .client import HTTPClient
-from .openrouter import OpenRouterClient
-from .tcp_check import check_tcp_connection, check_openrouter_connectivity
+from .commit_generator import CommitGenerator
+from .factory import ProviderFactory
+from .openrouter import OpenRouterProvider
+from .tcp_check import check_openrouter_connectivity, check_tcp_connection
 
 __all__ = [
     "HTTPClient",
-    "OpenRouterClient",
+    "OpenRouterProvider",
     "check_tcp_connection",
     "check_openrouter_connectivity",
+    "BaseAIProvider",
+    "ProviderFactory",
+    "CommitGenerator",
 ]
