@@ -169,12 +169,24 @@ class CommitParser:
 
     def _extract_subject_and_description(self, cleaned_message: str) -> Tuple[str, str]:
         """Extract subject and description from cleaned message"""
-        lines = [line for line in cleaned_message.split('\n') if line.strip()]
-        if not lines:
-            return "", None
+        lines = cleaned_message.split('\n')
+        
+        start_index = 0
+        for i, line in enumerate(lines):
+            if re.match(r"^[a-z]+(\([^)]+\))?:", line.strip()):
+                start_index = i
+                break
+        
+        relevant_message = "\n".join(lines[start_index:])
+        
+        parts = relevant_message.split('\n\n', 1)
+        subject = parts[0].replace('\n', ' ').strip()
+        description = parts[1].strip() if len(parts) > 1 else None
 
-        subject = lines[0]
-        description = "\n".join(lines[1:]) if len(lines) > 1 else None
+        # The old logic for making the subject concise might still be useful
+        if len(subject) > self.max_subject_length and ":" in subject:
+            subject, extra_lines = self._make_concise(subject, description or "")
+            description = extra_lines if extra_lines else None
 
         return subject, description
 
