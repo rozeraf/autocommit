@@ -3,6 +3,7 @@ from typing import List
 from src.models.commit import CommitMessage
 from src.models.api import ModelInfo
 
+
 class BaseAIProvider(ABC):
     """Abstract base class for AI providers."""
 

@@ -9,10 +9,10 @@ from typing import List, Optional
 from src.api.base import BaseAIProvider
 from src.api.client import HTTPClient
 from src.models.api import ModelInfo
-from src.models.commit import CommitMessage
 from src.config.loader import get_config
 
 logger = logging.getLogger(__name__)
+
 
 class OpenRouterProvider(BaseAIProvider):
     """AI provider for OpenRouter."""
@@ -83,5 +83,6 @@ class OpenRouterProvider(BaseAIProvider):
     def test_connectivity(self) -> bool:
         """Test connectivity to the OpenRouter API."""
         from src.api.tcp_check import check_tcp_connection, parse_url_for_tcp_check
+
         host, port = parse_url_for_tcp_check(self.api_url)
         return check_tcp_connection(host, port)

@@ -1,12 +1,12 @@
 """
 Commit message generator using a specified AI provider.
 """
+
 import logging
 from typing import Optional
 
 from src.api.base import BaseAIProvider
 from src.models.commit import CommitMessage
-from src.models.api import ModelInfo
 from src.parsers.diff_parser import DiffParser
 from src.parsers.commit_parser import CommitParser
 from src.config.loader import get_config
@@ -61,7 +61,9 @@ class CommitGenerator:
         self.provider = provider
         self.config = get_config()
 
-    def generate(self, diff: str, context: Optional[str] = None) -> Optional[CommitMessage]:
+    def generate(
+        self, diff: str, context: Optional[str] = None
+    ) -> Optional[CommitMessage]:
         """
         Generates a commit message.
 
@@ -87,7 +89,7 @@ class CommitGenerator:
         smart_diff = smart_diff_result.content
 
         logger.debug(f"Smart diff length: {len(smart_diff)} characters")
-        
+
         # This logic will be expanded when provider-specific prompts are added
         system_prompt = DEFAULT_SYSTEM_PROMPT
 
@@ -105,8 +107,10 @@ class CommitGenerator:
             logger.error("AI provider returned an empty response.")
             return None
 
-        logger.debug(f"""AI Response:
-{ai_response}""")
+        logger.debug(
+            f"""AI Response:
+{ai_response}"""
+        )
 
         parser = CommitParser()
         parsed_commit = parser.parse_ai_response(ai_response)

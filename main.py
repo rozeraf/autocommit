@@ -21,6 +21,7 @@ from src.parsers.diff_parser import DiffParser
 
 load_dotenv()
 
+
 def setup_logging(debug: bool = False):
     """Configure logging based on debug flag"""
     level = logging.DEBUG if debug else logging.INFO
@@ -29,9 +30,13 @@ def setup_logging(debug: bool = False):
         if debug
         else "%(message)s"
     )
-    logging.basicConfig(level=level, format=format_str, handlers=[logging.StreamHandler(sys.stdout)])
+    logging.basicConfig(
+        level=level, format=format_str, handlers=[logging.StreamHandler(sys.stdout)]
+    )
+
 
 logger = logging.getLogger(__name__)
+
 
 def main():
     """Main function"""
@@ -39,17 +44,43 @@ def main():
     config = get_config()
 
     parser = argparse.ArgumentParser(description="AI-powered commit message generation")
-    parser.add_argument("-d", "--debug", action="store_true", help="Enable debug logging")
+    parser.add_argument(
+        "-d", "--debug", action="store_true", help="Enable debug logging"
+    )
     parser.add_argument("-y", "--yes", action="store_true", help="Skip confirmation")
-    parser.add_argument("--dry-run", action="store_true", help="Generate and print commit message without committing")
-    parser.add_argument("--test", action="store_true", help="Run a series of self-tests to check application health")
-    parser.add_argument("--test-provider", action="store_true", help="Test connection for the configured provider")
-    parser.add_argument("--list-providers", action="store_true", help="List available AI providers")
-    parser.add_argument("--provider", help=f"Force a specific provider (e.g., {', '.join(ProviderFactory.get_available_providers())})")
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Generate and print commit message without committing",
+    )
+    parser.add_argument(
+        "--test",
+        action="store_true",
+        help="Run a series of self-tests to check application health",
+    )
+    parser.add_argument(
+        "--test-provider",
+        action="store_true",
+        help="Test connection for the configured provider",
+    )
+    parser.add_argument(
+        "--list-providers", action="store_true", help="List available AI providers"
+    )
+    parser.add_argument(
+        "--provider",
+        help=f"Force a specific provider (e.g., {', '.join(ProviderFactory.get_available_providers())})",
+    )
     parser.add_argument("--model", help="Override AI model from config")
-    parser.add_argument("-c", "--context", help="Provide a preset context for the commit")
+    parser.add_argument(
+        "-c", "--context", help="Provide a preset context for the commit"
+    )
     parser.add_argument("-i", "--hint", help="Provide a custom hint to the AI model")
-    parser.add_argument("--auto-context", action="store_true", default=config.context.auto_detect, help="Enable auto-detection of context")
+    parser.add_argument(
+        "--auto-context",
+        action="store_true",
+        default=config.context.auto_detect,
+        help="Enable auto-detection of context",
+    )
 
     args = parser.parse_args()
     setup_logging(args.debug)
@@ -62,7 +93,9 @@ def main():
             {
                 "name": "Checking for Git repository",
                 "passed": code == 0,
-                "message": "Git repository found" if code == 0 else "Not a Git repository",
+                "message": (
+                    "Git repository found" if code == 0 else "Not a Git repository"
+                ),
             }
         )
         # 2. Check for API Key
@@ -71,17 +104,27 @@ def main():
             {
                 "name": "Checking for OPENROUTER_API_KEY",
                 "passed": bool(api_key),
-                "message": "OPENROUTER_API_KEY is set" if api_key else "OPENROUTER_API_KEY not set",
+                "message": (
+                    "OPENROUTER_API_KEY is set"
+                    if api_key
+                    else "OPENROUTER_API_KEY not set"
+                ),
             }
         )
         # 3. Check git_utils.get_git_diff functionality
-        staged_files, code = git_utils.run_command(["git", "diff", "--cached", "--name-only"])
+        staged_files, code = git_utils.run_command(
+            ["git", "diff", "--cached", "--name-only"]
+        )
         test_results.append(
             {
                 "name": "Checking for staged files",
                 "passed": code == 0,
                 "message": "Can check for staged files",
-                "note": "No files are currently staged" if not staged_files.strip() else None,
+                "note": (
+                    "No files are currently staged"
+                    if not staged_files.strip()
+                    else None
+                ),
             }
         )
         # 4. Run unit tests
@@ -90,7 +133,9 @@ def main():
             {
                 "name": "Running unit tests with pytest",
                 "passed": code == 0,
-                "message": "Unit test suite passed" if code == 0 else "Unit test suite failed",
+                "message": (
+                    "Unit test suite passed" if code == 0 else "Unit test suite failed"
+                ),
             }
         )
         all_passed = ui.show_test_results(test_results)
@@ -119,19 +164,31 @@ def main():
         sys.exit(1)
 
     if args.test_provider:
-        spinner = Halo(text=f"{Fore.CYAN}Testing provider '{provider_name}'{Style.RESET_ALL}", spinner="dots")
+        spinner = Halo(
+            text=f"{Fore.CYAN}Testing provider '{provider_name}'{Style.RESET_ALL}",
+            spinner="dots",
+        )
         spinner.start()
         if provider.test_connectivity():
-            spinner.succeed(f"{Fore.GREEN}Provider '{provider_name}' is reachable.{Style.RESET_ALL}")
+            spinner.succeed(
+                f"{Fore.GREEN}Provider '{provider_name}' is reachable.{Style.RESET_ALL}"
+            )
         else:
-            spinner.fail(f"{Fore.RED}Provider '{provider_name}' is not reachable.{Style.RESET_ALL}")
+            spinner.fail(
+                f"{Fore.RED}Provider '{provider_name}' is not reachable.{Style.RESET_ALL}"
+            )
         sys.exit(0)
 
-    init_spinner = Halo(text=f"{Fore.CYAN}Initializing provider '{provider_name}'{Style.RESET_ALL}", spinner="dots")
+    init_spinner = Halo(
+        text=f"{Fore.CYAN}Initializing provider '{provider_name}'{Style.RESET_ALL}",
+        spinner="dots",
+    )
     init_spinner.start()
     model_info = provider.get_model_info()
     if model_info:
-        init_spinner.succeed(f"{Fore.GREEN}Provider initialized with model '{model_info.name}'.{Style.RESET_ALL}")
+        init_spinner.succeed(
+            f"{Fore.GREEN}Provider initialized with model '{model_info.name}'.{Style.RESET_ALL}"
+        )
     else:
         init_spinner.fail(f"{Fore.RED}Failed to initialize provider.{Style.RESET_ALL}")
         sys.exit(1)
@@ -148,24 +205,33 @@ def main():
         context_hints.append(args.context.lower())
     elif args.auto_context:
         diff_parser = DiffParser()
-        smart_diff = diff_parser.parse_diff(diff, model_info.context_length if model_info else None)
+        smart_diff = diff_parser.parse_diff(
+            diff, model_info.context_length if model_info else None
+        )
         detector = ContextDetector(config.context.wip_keywords)
         context_hints.extend(detector.detect(diff, smart_diff.stats))
 
-    prompt_context = ", ".join(sorted(list(set(context_hints)))) if context_hints else None
+    prompt_context = (
+        ", ".join(sorted(list(set(context_hints)))) if context_hints else None
+    )
 
     generator = CommitGenerator(provider)
 
     while True:
-        spinner = Halo(text=f"{Fore.CYAN}Generating commit message...{Style.RESET_ALL}", spinner="dots")
+        spinner = Halo(
+            text=f"{Fore.CYAN}Generating commit message...{Style.RESET_ALL}",
+            spinner="dots",
+        )
         spinner.start()
-        
+
         result = generator.generate(diff, prompt_context)
 
         if result:
             spinner.succeed(f"{Fore.GREEN}Commit message generated.{Style.RESET_ALL}")
         else:
-            spinner.fail(f"{Fore.RED}Failed to generate commit message.{Style.RESET_ALL}")
+            spinner.fail(
+                f"{Fore.RED}Failed to generate commit message.{Style.RESET_ALL}"
+            )
             sys.exit(1)
 
         if args.dry_run:
@@ -175,7 +241,9 @@ def main():
                 ui.show_info(f"Description:\n{result.description}")
             sys.exit(0)
 
-        confirmation = ui.show_confirmation(result.subject, result.description, args.yes)
+        confirmation = ui.show_confirmation(
+            result.subject, result.description, args.yes
+        )
 
         if confirmation is True:
             if git_utils.commit_changes(result.subject, result.description):
@@ -189,6 +257,7 @@ def main():
         else:
             ui.show_info("Commit cancelled.")
             sys.exit(0)
+
 
 if __name__ == "__main__":
     main()
