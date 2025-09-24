@@ -93,144 +93,158 @@ src/
 
 ## 2. Система мульти-провайдеров AI
 
-### 2.1 Базовый интерфейс провайдеров
-```
-src/
-├── api/
-│   ├── base.py       # BaseAIProvider абстрактный класс
-│   ├── factory.py    # ProviderFactory для создания провайдеров
-│   ├── openrouter.py # существующий, адаптировать к BaseAIProvider
-│   ├── openai.py     # новый OpenAI провайдер
-│   ├── anthropic.py  # новый Anthropic провайдер
-│   └── local.py      # для Ollama/локальных моделей
-```
+<details>
+<summary><strong>✅ 2.1 Базовый интерфейс провайдеров</strong></summary>
 
-**BaseAIProvider интерфейс:**
-```python
-class BaseAIProvider:
-    def generate_commit_message(self, diff: str, context: str) -> CommitMessage
-    def test_connectivity(self) -> bool
-    def get_model_info(self) -> ModelInfo
-    def get_required_env_vars(self) -> List[str]
-```
+    ```tree
+    src/
+    ├── api/
+    │   ├── base.py       # BaseAIProvider абстрактный класс
+    │   ├── factory.py    # ProviderFactory для создания провайдеров
+    │   ├── openrouter.py # существующий, адаптировать к BaseAIProvider
+    │   ├── openai.py     # новый OpenAI провайдер
+    │   ├── anthropic.py  # новый Anthropic провайдер
+    │   └── local.py      # для Ollama/локальных моделей
+    ```
 
-### 2.2 Конфигурационная система провайдеров
+    **BaseAIProvider интерфейс:**
+    ```python
+    class BaseAIProvider:
+        def generate_commit_message(self, diff: str, context: str) -> CommitMessage
+        def test_connectivity(self) -> bool
+        def get_model_info(self) -> ModelInfo
+        def get_required_env_vars(self) -> List[str]
+    ```
 
-**Структура config.toml:**
-```toml
-[ai]
-# Базовый провайдер (по умолчанию)
-base_provider = "openrouter"
-# Контекстное переключение
-context_switching = true
+</details>
+<details>
+<summary><strong>✅ 2.2 Конфигурационная система провайдеров</strong></summary>
 
-[ai.providers.openrouter]
-model = "deepseek/deepseek-chat-v3.1:free"
-api_url = "https://openrouter.ai/api/v1"
-temperature = 0.3
-max_tokens = 1000
-timeout = 45
-env_key = "OPENROUTER_API_KEY"
+    **Структура config.toml:**
+    ```toml
+    [ai]
+    # Базовый провайдер (по умолчанию)
+    base_provider = "openrouter"
+    # Контекстное переключение
+    context_switching = true
 
-[ai.providers.openai] 
-model = "gpt-4o-mini"
-api_url = "https://api.openai.com/v1"
-temperature = 0.3
-max_tokens = 1000
-timeout = 30
-env_key = "OPENAI_API_KEY"
+    [ai.providers.openrouter]
+    model = "deepseek/deepseek-chat-v3.1:free"
+    api_url = "https://openrouter.ai/api/v1"
+    temperature = 0.3
+    max_tokens = 1000
+    timeout = 45
+    env_key = "OPENROUTER_API_KEY"
 
-[ai.providers.anthropic]
-model = "claude-3-5-sonnet-20241022"
-api_url = "https://api.anthropic.com/v1"
-temperature = 0.3
-max_tokens = 1000
-timeout = 60
-env_key = "ANTHROPIC_API_KEY"
+    [ai.providers.openai] 
+    model = "gpt-4o-mini"
+    api_url = "https://api.openai.com/v1"
+    temperature = 0.3
+    max_tokens = 1000
+    timeout = 30
+    env_key = "OPENAI_API_KEY"
 
-[ai.providers.local]
-model = "llama3.1:8b"
-api_url = "http://localhost:11434/api"
-temperature = 0.3
-max_tokens = 1000
-timeout = 120
-# Локальные модели не требуют API ключа
+    [ai.providers.anthropic]
+    model = "claude-3-5-sonnet-20241022"
+    api_url = "https://api.anthropic.com/v1"
+    temperature = 0.3
+    max_tokens = 1000
+    timeout = 60
+    env_key = "ANTHROPIC_API_KEY"
 
-# Правила переключения контекста
-[ai.context_rules]
-# Большие рефакторинги -> более мощная модель
-large_changes = { provider = "openai", threshold_lines = 500 }
-# Документация -> быстрая модель
-documentation = { provider = "openrouter", file_patterns = ["*.md", "*.rst"] }
-# Тесты -> специализированная модель  
-tests = { provider = "anthropic", file_patterns = ["test_*.py", "*_test.py"] }
-```
+    [ai.providers.local]
+    model = "llama3.1:8b"
+    api_url = "http://localhost:11434/api"
+    temperature = 0.3
+    max_tokens = 1000
+    timeout = 120
+    # Локальные модели не требуют API ключа
 
-### 2.3 Фабрика провайдеров и менеджер
+    # Правила переключения контекста
+    [ai.context_rules]
+    # Большие рефакторинги -> более мощная модель
+    large_changes = { provider = "openai", threshold_lines = 500 }
+    # Документация -> быстрая модель
+    documentation = { provider = "openrouter", file_patterns = ["*.md", "*.rst"] }
+    # Тесты -> специализированная модель  
+    tests = { provider = "anthropic", file_patterns = ["test_*.py", "*_test.py"] }
+    ```
 
-```python
-# src/api/factory.py
-class ProviderFactory:
-    @staticmethod
-    def create_provider(provider_name: str, config: dict) -> BaseAIProvider
-    
-    @staticmethod
-    def get_available_providers() -> List[str]
-    
-    @staticmethod
-    def validate_provider_config(provider_name: str, config: dict) -> bool
+</details>
+<details>
+<summary><strong>✅ 2.3 Фабрика провайдеров и менеджер</strong></summary>
 
-# src/api/manager.py  
-class AIProviderManager:
-    def __init__(self, config: Config)
-    def get_provider_for_context(self, diff: str, context: str) -> BaseAIProvider
-    def get_base_provider(self) -> BaseAIProvider
-    def test_all_providers(self) -> Dict[str, bool]
-```
+    ```python
+    # src/api/factory.py
+    class ProviderFactory:
+        @staticmethod
+        def create_provider(provider_name: str, config: dict) -> BaseAIProvider
+        
+        @staticmethod
+        def get_available_providers() -> List[str]
+        
+        @staticmethod
+        def validate_provider_config(provider_name: str, config: dict) -> bool
 
-**Логика переключения:**
-1. Проверить правила context_rules в конфиге
-2. Если совпадение найдено - использовать указанный провайдер
-3. Иначе использовать base_provider
-4. Fallback на первый доступный провайдер
+    # src/api/manager.py  
+    class AIProviderManager:
+        def __init__(self, config: Config)
+        def get_provider_for_context(self, diff: str, context: str) -> BaseAIProvider
+        def get_base_provider(self) -> BaseAIProvider
+        def test_all_providers() -> Dict[str, bool]
+    ```
 
-### 2.4 CLI интеграция провайдеров
+    **Логика переключения:**
+    1. Проверить правила context_rules в конфиге
+    2. Если совпадение найдено - использовать указанный провайдер
+    3. Иначе использовать base_provider
+    4. Fallback на первый доступный провайдер
 
-**Новые аргументы:**
-```bash
-gac --provider openai           # принудительный выбор провайдера
-gac --list-providers           # показать доступные провайдеры
-gac --test-providers           # проверить подключение всех провайдеров
-gac --provider-info openai     # информация о провайдере
-```
+</details>
 
-**Environment variables:**
-```bash
-# В .env или системных переменных
-OPENROUTER_API_KEY=sk-or-...
-OPENAI_API_KEY=sk-...
-ANTHROPIC_API_KEY=sk-ant-...
-```
+<details>
+<summary><strong>🕒 2.4 CLI интеграция провайдеров</strong></summary>
 
-### 2.5 Промпты для разных провайдеров
+    **Новые аргументы:**
+    ```bash
+    gac --provider openai           # принудительный выбор провайдера
+    gac --list-providers           # показать доступные провайдеры
+    gac --test-providers           # проверить подключение всех провайдеров
+    gac --provider-info openai     # информация о провайдере
+    ```
 
-**Конфигурация промптов:**
-```toml
-[ai.prompts]
-# Базовый промпт (по умолчанию)
-default = """Your task is to generate..."""
+    **Environment variables:**
+    ```bash
+    # В .env или системных переменных
+    OPENROUTER_API_KEY=sk-or-...
+    OPENAI_API_KEY=sk-...
+    ANTHROPIC_API_KEY=sk-ant-...
+    ```
 
-# Специфичные для провайдеров
-openrouter = """Enhanced prompt for OpenRouter models..."""
-openai = """GPT-optimized prompt with specific formatting..."""
-anthropic = """Claude-style conversational prompt..."""
-local = """Simplified prompt for local models..."""
-```
+</details>
 
-**Загрузка промптов:**
-- Сначала ищет prompt для конкретного провайдера
-- Fallback на default промпт
-- Fallback на hardcoded DEFAULT_SYSTEM_PROMPT
+<details>
+<summary><strong>🕒 2.5 Промпты для разных провайдеров</strong></summary>
+
+    **Конфигурация промптов:**
+    ```toml
+    [ai.prompts]
+    # Базовый промпт (по умолчанию)
+    default = """Your task is to generate..."""
+
+    # Специфичные для провайдеров
+    openrouter = """Enhanced prompt for OpenRouter models..."""
+    openai = """GPT-optimized prompt with specific formatting..."""
+    anthropic = """Claude-style conversational prompt..."""
+    local = """Simplified prompt for local models..."""
+    ```
+
+    **Загрузка промптов:**
+    - Сначала ищет prompt для конкретного провайдера
+    - Fallback на default промпт
+    - Fallback на hardcoded DEFAULT_SYSTEM_PROMPT
+
+</details>
 
 
 
