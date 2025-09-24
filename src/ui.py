@@ -212,6 +212,22 @@ def show_tip(message: str):
     console.print(f"[cyan]Tip:[/cyan] {message}")
 
 
+def show_provider_tests(results: dict[str, bool]):
+    """Show provider test results in a formatted way"""
+    console.print("\nRunning provider connectivity tests...")
+    all_passed = True
+    for name, passed in results.items():
+        if passed:
+            console.print(f"[green]✓ {name}:[/green] Connection successful")
+        else:
+            console.print(f"[red]✗ {name}:[/red] Connection failed")
+            all_passed = False
+    if all_passed:
+        console.print("\n[green bold]All providers are reachable![/green bold]")
+    else:
+        console.print("\n[red bold]Some providers are not reachable.[/red bold]")
+
+
 def show_test_results(results: list[dict]):
     """Show test results in a formatted way"""
     console.print("\nRunning application self-tests...")

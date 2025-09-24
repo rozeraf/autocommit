@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from typing import List, Dict, Optional
 
+
 @dataclass
 class ProviderConfig:
     model: str
@@ -9,6 +10,7 @@ class ProviderConfig:
     max_tokens: int = 1000
     timeout: int = 45
     env_key: Optional[str] = None
+
 
 @dataclass
 class AIConfig:
@@ -24,12 +26,24 @@ class AIConfig:
     max_tokens: int = 250
     timeout: int = 45
 
+
 @dataclass
 class FormatConfig:
     max_subject_length: int = 50
     require_body_for_features: bool = True
     enforce_conventional: bool = True
-    allowed_types: List[str] = field(default_factory=lambda: ["feat", "fix", "docs", "style", "refactor", "test", "chore"])
+    allowed_types: List[str] = field(
+        default_factory=lambda: [
+            "feat",
+            "fix",
+            "docs",
+            "style",
+            "refactor",
+            "test",
+            "chore",
+        ]
+    )
+
 
 @dataclass
 class ContextConfig:
@@ -37,10 +51,12 @@ class ContextConfig:
     auto_detect: bool = True
     presets: Dict[str, str] = field(default_factory=dict)
 
+
 @dataclass
 class DiffConfig:
     context_reserve: int = 4000
     char_per_line_ratio: int = 80
+
 
 @dataclass
 class Config:

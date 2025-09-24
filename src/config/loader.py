@@ -14,9 +14,17 @@ except ImportError:
     except ImportError:
         tomllib = None
 
-from .models import Config, AIConfig, FormatConfig, ContextConfig, ProviderConfig, DiffConfig
+from .models import (
+    Config,
+    AIConfig,
+    FormatConfig,
+    ContextConfig,
+    ProviderConfig,
+    DiffConfig,
+)
 
 logger = logging.getLogger(__name__)
+
 
 def _find_config_file() -> Optional[Path]:
     """Find config.toml file in project root, current directory, then home directory"""
@@ -29,6 +37,7 @@ def _find_config_file() -> Optional[Path]:
     logger.debug("No config.toml found, using defaults")
     return None
 
+
 def _load_toml_config(config_path: Path) -> dict:
     """Load TOML configuration file"""
     if not tomllib:
@@ -40,6 +49,7 @@ def _load_toml_config(config_path: Path) -> dict:
     except Exception as e:
         logger.error(f"Failed to load config from {config_path}: {e}")
         return {}
+
 
 def get_config() -> Config:
     """
@@ -74,4 +84,6 @@ def get_config() -> Config:
     diff_data = config_data.get("diff", {})
     diff_config = DiffConfig(**diff_data)
 
-    return Config(ai=ai_config, format=format_config, context=context_config, diff=diff_config)
+    return Config(
+        ai=ai_config, format=format_config, context=context_config, diff=diff_config
+    )

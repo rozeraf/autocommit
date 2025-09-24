@@ -21,12 +21,13 @@ class ProviderFactory:
 
     @staticmethod
     def create_provider(provider_name: str, config: ProviderConfig) -> BaseAIProvider:
-            """Creates a provider instance."""
-            if provider_name not in ProviderFactory._providers:
-                raise ValueError(f"Provider '{provider_name}' is not supported.")
-            
-            provider_class = ProviderFactory._providers[provider_name]
-            return provider_class(config=config)
+        """Creates a provider instance."""
+        if provider_name not in ProviderFactory._providers:
+            raise ValueError(f"Provider '{provider_name}' is not supported.")
+
+        provider_class = ProviderFactory._providers[provider_name]
+        return provider_class(config=config)
+
     @staticmethod
     def get_available_providers() -> List[str]:
         """Returns a list of available providers."""
@@ -38,8 +39,7 @@ class ProviderFactory:
         if provider_name not in ProviderFactory._providers:
             return False
 
-        provider_class = ProviderFactory._providers[provider_name]
-        required_vars = provider_class().get_required_env_vars()
+        ProviderFactory._providers[provider_name]
         # Basic validation: check if env vars are present in config or environment
         # This logic will be more complex later
         return True

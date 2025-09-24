@@ -14,6 +14,7 @@ from halo import Halo
 
 from src.api.factory import ProviderFactory
 from src.api.commit_generator import CommitGenerator
+from src.api.manager import AIProviderManager
 from src import git_utils, ui
 from src.config.loader import get_config
 from src.context.detector import ContextDetector
@@ -42,6 +43,7 @@ def main():
     """Main function"""
     colorama_init(autoreset=True)
     config = get_config()
+    manager = AIProviderManager(config)
 
     parser = argparse.ArgumentParser(description="AI-powered commit message generation")
     parser.add_argument(
@@ -59,9 +61,9 @@ def main():
         help="Run a series of self-tests to check application health",
     )
     parser.add_argument(
-        "--test-provider",
+        "--test-providers",
         action="store_true",
-        help="Test connection for the configured provider",
+        help="Test connection for all configured providers",
     )
     parser.add_argument(
         "--list-providers", action="store_true", help="List available AI providers"
@@ -154,36 +156,41 @@ def main():
         ui.show_error("Not a git repository.")
         sys.exit(1)
 
-    provider_name = args.provider or config.ai.base_provider
-    provider_config = config.ai.providers.get(provider_name)
-    if not provider_config:
-        ui.show_error(f"Configuration for provider '{provider_name}' not found in config.toml.")
+    diff = git_utils.get_git_diff()
+    if not diff:
+        ui.show_warning("No staged changes found!")
+        sys.exit(1)
+
+    if args.provider:
+        provider = manager._get_or_create_provider(args.provider)
+        # Когда выбран провайдер через флаг, используем его имя прямо
+        provider_name = args.provider
+    else:
+        provider = manager.get_provider_for_context(diff)
+        # Попытка получить имя провайдера из объекта; запасные варианты на случай разных реализаций
+        provider_name = (
+            getattr(provider, "name", None)
+            or getattr(provider, "provider_name", None)
+            or provider.__class__.__name__
+        )
+
+    if provider is None:
+        ui.show_error("No AI provider could be initialized.")
         sys.exit(1)
 
     # Override model from command line if provided
     if args.model:
-        provider_config.model = args.model
-
-    try:
-        provider = ProviderFactory.create_provider(provider_name, provider_config)
-    except (ValueError, NotImplementedError) as e:
-        ui.show_error(f"Failed to create provider '{provider_name}': {e}")
-        sys.exit(1)
-
-    if args.test_provider:
-        spinner = Halo(
-            text=f"{Fore.CYAN}Testing provider '{provider_name}'{Style.RESET_ALL}",
-            spinner="dots",
-        )
-        spinner.start()
-        if provider.test_connectivity():
-            spinner.succeed(
-                f"{Fore.GREEN}Provider '{provider_name}' is reachable.{Style.RESET_ALL}"
-            )
+        # защита на случай, если у провайдера нет атрибута model
+        if hasattr(provider, "model"):
+            provider.model = args.model
         else:
-            spinner.fail(
-                f"{Fore.RED}Provider '{provider_name}' is not reachable.{Style.RESET_ALL}"
+            logger.warning(
+                "Selected provider does not support overriding model via --model"
             )
+
+    if args.test_providers:
+        results = manager.test_all_providers()
+        ui.show_provider_tests(results)
         sys.exit(0)
 
     init_spinner = Halo(
