@@ -154,11 +154,18 @@ def main():
         ui.show_error("Not a git repository.")
         sys.exit(1)
 
-    provider_name = args.provider or "openrouter"
-    model_name = args.model or config.ai.model
+    provider_name = args.provider or config.ai.base_provider
+    provider_config = config.ai.providers.get(provider_name)
+    if not provider_config:
+        ui.show_error(f"Configuration for provider '{provider_name}' not found in config.toml.")
+        sys.exit(1)
+
+    # Override model from command line if provided
+    if args.model:
+        provider_config.model = args.model
 
     try:
-        provider = ProviderFactory.create_provider(provider_name, {"model": model_name})
+        provider = ProviderFactory.create_provider(provider_name, provider_config)
     except (ValueError, NotImplementedError) as e:
         ui.show_error(f"Failed to create provider '{provider_name}': {e}")
         sys.exit(1)

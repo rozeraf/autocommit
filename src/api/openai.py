@@ -8,8 +8,8 @@ from typing import List, Optional
 
 from src.api.base import BaseAIProvider
 from src.api.client import HTTPClient
+from src.config.models import ProviderConfig
 from src.models.api import ModelInfo
-from src.config.loader import get_config
 
 logger = logging.getLogger(__name__)
 
@@ -17,15 +17,14 @@ logger = logging.getLogger(__name__)
 class OpenAIProvider(BaseAIProvider):
     """AI provider for OpenAI."""
 
-    def __init__(self, api_key: Optional[str] = None, model: Optional[str] = None):
-        config = get_config()
-        self.api_key = api_key or os.getenv("OPENAI_API_KEY")
-        # Find a way to get the model from the config for this provider
-        self.model = model or "gpt-4o-mini"
-        self.api_url = "https://api.openai.com/v1"
+    def __init__(self, config: ProviderConfig):
+        self.config = config
+        self.api_key = os.getenv(config.env_key) if config.env_key else None
+        self.model = config.model
+        self.api_url = config.api_url
 
         if not self.api_key:
-            raise ValueError("OPENAI_API_KEY is not set.")
+            raise ValueError(f"{config.env_key} is not set.")
 
         self.http_client = HTTPClient(base_url=self.api_url)
 
@@ -45,15 +44,14 @@ class OpenAIProvider(BaseAIProvider):
 
     def generate_commit_message(self, diff: str, context: str) -> Optional[str]:
         """Generate a commit message using OpenAI API."""
-        config = get_config()
         payload = {
             "model": self.model,
             "messages": [
                 {"role": "system", "content": context},
                 {"role": "user", "content": diff},
             ],
-            "max_tokens": config.ai.max_tokens,
-            "temperature": config.ai.temperature,
+            "max_tokens": self.config.max_tokens,
+            "temperature": self.config.temperature,
         }
         headers = {
             "Authorization": f"Bearer {self.api_key}",
@@ -65,7 +63,7 @@ class OpenAIProvider(BaseAIProvider):
                 "/chat/completions",
                 json=payload,
                 headers=headers,
-                timeout=config.ai.timeout,
+                timeout=self.config.timeout,
             )
             response.raise_for_status()
             data = response.json()

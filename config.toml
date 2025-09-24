@@ -1,9 +1,31 @@
 [ai]
+# DEPRECATED: These top-level settings are for backward compatibility.
+# Please define providers in the [ai.providers] section below.
 model = "deepseek/deepseek-chat-v3.1:free"
 api_url = "https://openrouter.ai/api/v1"
 temperature = 0.3
 max_tokens = 1000
 timeout = 45
+
+# New provider-based configuration
+base_provider = "openrouter"
+context_switching = true
+
+[ai.providers.openrouter]
+model = "deepseek/deepseek-chat-v3.1:free"
+api_url = "https://openrouter.ai/api/v1"
+temperature = 0.3
+max_tokens = 1000
+timeout = 45
+env_key = "OPENROUTER_API_KEY"
+
+[ai.providers.openai] 
+model = "gpt-4o-mini"
+api_url = "https://api.openai.com/v1"
+temperature = 0.3
+max_tokens = 1000
+timeout = 30
+env_key = "OPENAI_API_KEY"
 
 [format]
 max_subject_length = 70
@@ -11,38 +33,27 @@ require_body_for_features = true
 enforce_conventional = true
 allowed_types = ["feat", "fix", "docs", "style", "refactor", "perf", "test", "build", "ci", "chore", "revert"]
 
-[diff]
-context_reserve = 4000
-char_per_line_ratio = 80
-
 [context]
 wip_keywords = ["TODO", "FIXME", "WIP", "HACK", "XXX", "NOTE"]
 auto_detect = true
 
 [ai.prompts]
-openrouter = '''Your task is to generate a commit message based on the provided diff and context hints, following the Conventional Commits specification.
+default = '''Your task is to generate a commit message based on the provided diff, following the Conventional Commits specification.
 
 RULES:
 1. Output ONLY the commit message text - no explanations, markdown blocks, or extra text.
 
-2. A `Context hints:` line may be provided. This line contains a list of automatically detected tags (e.g., 'tests_modified', 'wip_keyword_todo', 'docs').
-
-3. You MUST intelligently interpret these hints in conjunction with the code diff. For example:
-   - If the hint is 'wip_keyword_todo' and the code diff shows a new '# TODO' comment, the commit might be a 'chore(wip): ...' or 'feat(...): ...' with a note about the TODO.
-   - If the hint is 'wip' but the code diff ONLY changes documentation files, you should likely generate a 'docs: ...' commit and IGNORE the 'wip' hint for the commit type.
-   - Use the hints to guide your choice of commit type (e.g., 'tests_modified' suggests 'test: ...') and the content of your message.
-
-4. Format: `type(scope): subject`
+2. Format: `type(scope): subject`
    - Subject: max 50 chars, imperative mood ("add", not "added")
    - Body: detailed bullet points if needed
    - Footer: BREAKING CHANGE if applicable
 
-5. Scope selection:
+3. Scope selection:
    - Use specific module/component names when possible
    - Examples: api, ui, config, models, tests, git_utils
    - Omit scope only for broad changes across multiple areas
 
-6. Types (strict priority order):
+4. Types (strict priority order):
    - `feat`: New features or capabilities
    - `fix`: Bug fixes and error corrections  
    - `refactor`: Code restructuring without behavior change
@@ -55,13 +66,13 @@ RULES:
    - `chore`: Maintenance tasks
    - `revert`: Reverting previous commits
 
-7. Body structure (when needed):
+5. Body structure (when needed):
    - Use bullet points with hyphens (-)
    - Start each point with action verb
    - Group related changes logically
    - Explain WHY for complex changes
 
-8. Quality checks:
+6. Quality checks:
    - Subject must be imperative mood
    - No period at end of subject
    - Body separated by blank line

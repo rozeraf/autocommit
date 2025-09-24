@@ -1,19 +1,5 @@
 """
 Configuration loader for Git Auto Commit
-
-Copyright (C) 2025 rozeraf
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program. If not, see <https://www.gnu.org/licenses/>.
 """
 
 import logging
@@ -28,123 +14,64 @@ except ImportError:
     except ImportError:
         tomllib = None
 
-from ..models.config import (
-    AIConfig,
-    FormatConfig,
-    DiffConfig,
-    ContextConfig,
-    AppConfig,
-)
+from .models import Config, AIConfig, FormatConfig, ContextConfig, ProviderConfig, DiffConfig
 
 logger = logging.getLogger(__name__)
 
-
 def _find_config_file() -> Optional[Path]:
     """Find config.toml file in project root, current directory, then home directory"""
-    # Get the path to the directory of the current script
-    script_dir = Path(__file__).parent
-    # project_root is 3 levels up from src/config/loader.py
-    project_root = script_dir.parent.parent.parent
-
-    # Define search paths
-    search_paths = [
-        project_root,
-        Path.cwd(),
-        Path.home(),
-    ]
-
+    search_paths = [Path.cwd(), Path.home(), Path(__file__).parent.parent.parent]
     for path in search_paths:
         config_path = path / "config.toml"
         if config_path.exists():
             logger.debug(f"Found config.toml in: {config_path}")
             return config_path
-
     logger.debug("No config.toml found, using defaults")
     return None
-
 
 def _load_toml_config(config_path: Path) -> dict:
     """Load TOML configuration file"""
     if not tomllib:
         logger.warning("tomllib or toml library not available, using defaults")
         return {}
-
     try:
         with open(config_path, "rb") as f:
-            config_data = tomllib.load(f)
-        logger.debug(f"Loaded config from {config_path}")
-        return config_data
+            return tomllib.load(f)
     except Exception as e:
         logger.error(f"Failed to load config from {config_path}: {e}")
         return {}
 
-
-def get_config() -> AppConfig:
+def get_config() -> Config:
     """
     Load configuration with fallback to defaults
-
-    Returns:
-        AppConfig: Complete application configuration
     """
-    config_data = {}
+    config_data = _load_toml_config(_find_config_file()) if _find_config_file() else {}
+    ai_data = config_data.get("ai", {})
 
-    # Try to load from config file
-    config_path = _find_config_file()
-    if config_path:
-        config_data = _load_toml_config(config_path)
+    providers = {}
+    for name, provider_data in ai_data.get("providers", {}).items():
+        providers[name] = ProviderConfig(**provider_data)
 
-    # Create configuration objects with defaults
     ai_config = AIConfig(
-        model=config_data.get("ai", {}).get(
-            "model", "deepseek/deepseek-chat-v3.1:free"
-        ),
-        api_url=config_data.get("ai", {}).get(
-            "api_url", "https://openrouter.ai/api/v1"
-        ),
-        temperature=config_data.get("ai", {}).get("temperature", 0.3),
-        max_tokens=config_data.get("ai", {}).get("max_tokens", 1000),
-        timeout=config_data.get("ai", {}).get("timeout", 45),
-        prompts=config_data.get("ai", {}).get("prompts", {}),
+        base_provider=ai_data.get("base_provider", "openrouter"),
+        context_switching=ai_data.get("context_switching", True),
+        providers=providers,
+        context_rules=ai_data.get("context_rules", {}),
+        prompts=ai_data.get("prompts", {}),
+        model=ai_data.get("model", ""),
+        api_url=ai_data.get("api_url", ""),
+        temperature=ai_data.get("temperature", 0.4),
+        max_tokens=ai_data.get("max_tokens", 250),
+        timeout=ai_data.get("timeout", 45),
     )
 
-    format_config = FormatConfig(
-        max_subject_length=config_data.get("format", {}).get("max_subject_length", 70),
-        require_body_for_features=config_data.get("format", {}).get(
-            "require_body_for_features", True
-        ),
-        enforce_conventional=config_data.get("format", {}).get(
-            "enforce_conventional", True
-        ),
-        allowed_types=config_data.get("format", {}).get(
-            "allowed_types",
-            [
-                "feat",
-                "fix",
-                "docs",
-                "style",
-                "refactor",
-                "perf",
-                "test",
-                "build",
-                "ci",
-                "chore",
-                "revert",
-            ],
-        ),
-    )
+    format_data = config_data.get("format", {})
+    format_config = FormatConfig(**format_data)
 
-    diff_config = DiffConfig(
-        context_reserve=config_data.get("diff", {}).get("context_reserve", 4000),
-        char_per_line_ratio=config_data.get("diff", {}).get("char_per_line_ratio", 80),
-    )
+    context_data = config_data.get("context", {})
+    context_config = ContextConfig(**context_data)
 
-    context_config = ContextConfig(
-        wip_keywords=config_data.get("context", {}).get(
-            "wip_keywords", ["TODO", "FIXME", "WIP", "HACK", "XXX", "NOTE"]
-        ),
-        auto_detect=config_data.get("context", {}).get("auto_detect", True),
-    )
+    diff_data = config_data.get("diff", {})
+    diff_config = DiffConfig(**diff_data)
 
-    return AppConfig(
-        ai=ai_config, format=format_config, diff=diff_config, context=context_config
-    )
+    return Config(ai=ai_config, format=format_config, context=context_config, diff=diff_config)

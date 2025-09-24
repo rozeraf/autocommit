@@ -169,46 +169,14 @@ class CommitParser:
 
     def _extract_subject_and_description(self, cleaned_message: str) -> Tuple[str, str]:
         """Extract subject and description from cleaned message"""
-        # Try to find the actual commit message if the first line doesn't look like one
-        lines = cleaned_message.split("\n")
-        commit_line_idx = 0
+        lines = [line for line in cleaned_message.split('\n') if line.strip()]
+        if not lines:
+            return "", None
 
-        # Look for a line that looks like a conventional commit (type: or type(scope):)
-        for i, line in enumerate(lines):
-            line = line.strip()
-            if line and re.match(r"^[a-z]+(\([^)]+\))?:", line):
-                commit_line_idx = i
-                break
+        subject = lines[0]
+        description = "\n".join(lines[1:]) if len(lines) > 1 else None
 
-        # If we found a commit-like line, reconstruct the message from that point
-        if commit_line_idx > 0:
-            cleaned_message = "\n".join(lines[commit_line_idx:])
-
-        # Now parse the cleaned message
-        lines = cleaned_message.split("\n", 1)
-        first_line = lines[0].strip() if lines else ""
-        extra_lines = lines[1].strip() if len(lines) > 1 else ""
-
-        # Process the first line to ensure it's a concise conventional commit
-        commit_msg = first_line
-        if first_line and ":" in first_line:
-            # If the first line contains details after a dash, move them to description
-            subject, details = self._split_on_dash(first_line)
-            if details:
-                commit_msg = subject
-                extra_lines = (details + "\n" + extra_lines) if extra_lines else details
-
-        # If the message is still too long, try to make it more concise
-        if len(commit_msg) > self.max_subject_length and ":" in commit_msg:
-            commit_msg, extra_lines = self._make_concise(commit_msg, extra_lines)
-
-        description = extra_lines if extra_lines else None
-
-        # Clean up description
-        if description:
-            description = description.strip()
-
-        return commit_msg, description
+        return subject, description
 
     def _split_on_dash(self, text: str) -> Tuple[str, str]:
         """Split text on first dash that follows the commit type and scope"""

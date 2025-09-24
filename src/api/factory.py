@@ -1,5 +1,6 @@
 from typing import List, Dict, Type
 from src.api.base import BaseAIProvider
+from src.config.models import ProviderConfig
 from src.api.openrouter import OpenRouterProvider
 from src.api.openai import OpenAIProvider
 
@@ -19,15 +20,13 @@ class ProviderFactory:
     }
 
     @staticmethod
-    def create_provider(provider_name: str, config: dict) -> BaseAIProvider:
-        """Creates a provider instance."""
-        if provider_name not in ProviderFactory._providers:
-            raise ValueError(f"Provider '{provider_name}' is not supported.")
-
-        provider_class = ProviderFactory._providers[provider_name]
-        # Here we would pass provider-specific config to the constructor
-        return provider_class()
-
+    def create_provider(provider_name: str, config: ProviderConfig) -> BaseAIProvider:
+            """Creates a provider instance."""
+            if provider_name not in ProviderFactory._providers:
+                raise ValueError(f"Provider '{provider_name}' is not supported.")
+            
+            provider_class = ProviderFactory._providers[provider_name]
+            return provider_class(config=config)
     @staticmethod
     def get_available_providers() -> List[str]:
         """Returns a list of available providers."""
