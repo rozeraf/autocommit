@@ -27,6 +27,14 @@ max_tokens = 1000
 timeout = 30
 env_key = "OPENAI_API_KEY"
 
+[ai.providers.anthropic]
+model = "claude-3-5-sonnet-20240620"
+api_url = "https://api.anthropic.com/v1"
+temperature = 0.3
+max_tokens = 1000
+timeout = 60
+env_key = "ANTHROPIC_API_KEY"
+
 [format]
 max_subject_length = 70
 require_body_for_features = true
