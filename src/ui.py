@@ -212,6 +212,66 @@ def show_tip(message: str):
     console.print(f"[cyan]Tip:[/cyan] {message}")
 
 
+def show_provider_info(
+    provider_name: str, model_info: dict, env_vars: list[str], config: dict
+):
+    """Displays detailed information about a specific AI provider."""
+    import os
+    from rich.table import Table
+
+    console.print()
+    console.print(f"[bold cyan]Provider Information: {provider_name}[/bold cyan]")
+
+    if model_info:
+        model_table = Table(show_header=False, box=None, padding=(0, 2))
+        model_table.add_row("[bold]Model:[/bold]", f"[green]{model_info.name}[/green]")
+        if model_info.context_length:
+            model_table.add_row(
+                "[bold]Context Window:[/bold]", f"{model_info.context_length:,} tokens"
+            )
+
+        console.print(
+            Panel(
+                model_table,
+                title="[yellow]Model Details[/yellow]",
+                border_style="yellow",
+                expand=False,
+            )
+        )
+
+    if config:
+        config_table = Table(show_header=False, box=None, padding=(0, 2))
+        for key, value in config.items():
+            config_table.add_row(
+                f"[bold]{key.replace('_', ' ').title()}:[/bold]", str(value)
+            )
+        console.print(
+            Panel(
+                config_table,
+                title="[yellow]Configuration[/yellow]",
+                border_style="yellow",
+                expand=False,
+            )
+        )
+
+    if env_vars:
+        env_table = Table(show_header=False, box=None, padding=(0, 2))
+        for var in env_vars:
+            is_set = os.getenv(var) is not None
+            icon = "[green]✓[/green]" if is_set else "[red]✗[/red]"
+            env_table.add_row(icon, var)
+        console.print(
+            Panel(
+                env_table,
+                title="[yellow]Required Environment Variables[/yellow]",
+                border_style="yellow",
+                expand=False,
+            )
+        )
+
+    console.print()
+
+
 def show_provider_tests(results: dict[str, bool]):
     """Show provider test results in a formatted way"""
     console.print("\nRunning provider connectivity tests...")

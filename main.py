@@ -7,6 +7,7 @@ import argparse
 import logging
 import os
 import sys
+from dataclasses import asdict
 
 from colorama import Fore, Style, init as colorama_init
 from dotenv import load_dotenv
@@ -69,6 +70,11 @@ def main():
         "--list-providers", action="store_true", help="List available AI providers"
     )
     parser.add_argument(
+        "--provider-info",
+        help="Show detailed information for a specific provider",
+        metavar="PROVIDER_NAME",
+    )
+    parser.add_argument(
         "--provider",
         help=f"Force a specific provider (e.g., {', '.join(ProviderFactory.get_available_providers())})",
     )
@@ -86,6 +92,25 @@ def main():
 
     args = parser.parse_args()
     setup_logging(args.debug)
+
+    if args.provider_info:
+        provider_name = args.provider_info
+        try:
+            provider = manager._get_or_create_provider(provider_name)
+            model_info = provider.get_model_info()
+            env_vars = provider.get_required_env_vars()
+            provider_config = config.ai.providers.get(provider_name)
+
+            ui.show_provider_info(
+                provider_name,
+                model_info,
+                env_vars,
+                asdict(provider_config) if provider_config else None,
+            )
+            sys.exit(0)
+        except ValueError as e:
+            ui.show_error(str(e))
+            sys.exit(1)
 
     if args.test:
         test_results = []
