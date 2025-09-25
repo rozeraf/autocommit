@@ -1,18 +1,20 @@
 # Git Auto Commit
 
-Automatic git commit message generation using AI via OpenRouter API with beautiful terminal interface and comprehensive testing.
+![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)
+![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)
+![Linting: Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)
+![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)
+
+Automatic git commit message generation using AI with a beautiful terminal interface and comprehensive testing.
 
 ## Features
 
-- **AI-Powered**: Uses OpenRouter API with multiple model support
-- **Beautiful UI**: Rich terminal interface with colored output and styled boxes
-- **Smart Parsing**: Robust commit message parsing with markdown cleanup
-- **Interactive**: Preview, confirm, or regenerate commit messages
-- **Self-Testing**: Built-in health checks and comprehensive test suite
-- **Responsive**: Terminal-adaptive layouts with optimal sizing
-- **Secure**: Safe git operations without shell injection
-- **Fast**: Loading spinners and progress indicators
-- **Conventional Commits**: Enforces best practices for commit messages
+- **Multi-Provider AI**: Supports OpenRouter, OpenAI, and Anthropic backends.
+- **Beautiful UI**: Rich terminal interface with colored output and styled boxes.
+- **Smart Parsing**: Robust commit message parsing with markdown cleanup.
+- **Interactive**: Preview, confirm, or regenerate commit messages.
+- **Self-Testing**: Built-in health checks and a comprehensive test suite.
+- **Conventional Commits**: Enforces best practices for commit messages.
 
 ## Quick Start
 
@@ -40,39 +42,54 @@ cd autocommit
 pip install -r requirements.txt
 ```
 
-### 3. Configure API Key
+### 3. Configure API Keys
 
-Create `.env` file with your OpenRouter API key:
+Create a `.env` file with your API keys. You only need to add the keys for the providers you intend to use.
 
 ```bash
-echo "OPENROUTER_API_KEY=sk-or-v1-your-key-here" > .env
+# .env
+OPENROUTER_API_KEY=sk-or-v1-your-key-here
+OPENAI_API_KEY=sk-your-key-here
+ANTHROPIC_API_KEY=sk-ant-your-key-here
 ```
 
-Get your API key from https://openrouter.ai.
+Get your keys from:
+- **OpenRouter**: https://openrouter.ai
+- **OpenAI**: https://platform.openai.com/api-keys
+- **Anthropic**: https://console.anthropic.com/settings/keys
 
 ### 4. Configuration (Optional)
 
-The application uses `config.toml` for configuration. If not present, defaults are used.
+The application uses `config.toml` for all settings. A default configuration is used if the file is not present.
 
-Configure `config.toml` in the project root to customize settings. Example:
+Create `config.toml` in the project root to customize settings. Example:
 
 ```toml
-[ai]
-model = "google/gemini-2.0-flash-exp:free"
-api_url = "https://openrouter.ai/api/v1"
-temperature = 0.3
-max_tokens = 1000
-timeout = 45
+# Default provider to use
+base_provider = "openrouter"
 
+# Settings for each provider
+[ai.providers.openrouter]
+model = "deepseek/deepseek-chat-v3.1:free"
+temperature = 0.3
+env_key = "OPENROUTER_API_KEY"
+
+[ai.providers.openai] 
+model = "gpt-4o-mini"
+temperature = 0.3
+env_key = "OPENAI_API_KEY"
+
+[ai.providers.anthropic]
+model = "claude-3-5-sonnet-20240620"
+temperature = 0.3
+env_key = "ANTHROPIC_API_KEY"
+
+# Other settings
 [format]
 max_subject_length = 70
-require_body_for_features = true
-enforce_conventional = true
-allowed_types = ["feat", "fix", "docs", "style", "refactor", "perf", "test", "build", "ci", "chore", "revert"]
 
-[diff]
-context_reserve = 4000
-char_per_line_ratio = 80
+[context]
+auto_detect = true
 ```
 
 ### 5. Usage
@@ -81,8 +98,24 @@ char_per_line_ratio = 80
 # Stage changes
 git add .
 
-# Create AI commit
+# Create an AI-generated commit message
 python3 main.py
+
+# --- Provider Management ---
+
+# Use a specific provider (e.g., openai)
+python3 main.py --provider openai
+
+# List all available providers
+python3 main.py --list-providers
+
+# Test connectivity for all configured providers
+python3 main.py --test-providers
+
+# Get detailed info about a provider
+python3 main.py --provider-info anthropic
+
+# --- Other Options ---
 
 # Skip confirmation prompt
 python3 main.py -y
@@ -90,65 +123,52 @@ python3 main.py -y
 # Generate message without committing (dry run)
 python3 main.py --dry-run
 
-# Use a specific model
-python3 main.py --model anthropic/claude-3.5-sonnet
-
-# Test API connection
-python3 main.py --test-api
-
 # Run comprehensive self-tests
 python3 main.py --test
-
-# Enable debug logging
-python3 main.py --debug
 ```
 
 ## What's New
 
-This project has undergone significant improvements with the latest v2.0 release:
+This project has undergone significant improvements with the latest v2.3 release:
 
-- **Rich Terminal Interface**: Beautiful UI with styled boxes, colors, and interactive prompts
-- **Comprehensive Testing**: Full test suite with automated health checks
-- **Enhanced AI Parsing**: Smart commit message extraction from complex AI responses
-- **Loading Indicators**: Progress feedback with spinners and status updates
-- **Self-Diagnostics**: Built-in checks for repository and API configuration
+- **Multi-Provider AI**: Switch between OpenRouter, OpenAI, and Anthropic.
+- **New CLI Commands**: Manage and test providers directly from the command line.
+- **Enhanced Test Suite**: Full test coverage for the new provider system.
 
 For detailed information about all changes, see [CHANGELOG.md](CHANGELOG.md).
 
 ## Dependencies
 
 Managed via pip in `requirements.txt`. Key packages:
-- `requests` - API communication with OpenRouter
+- `requests` - API communication
 - `python-dotenv` - Environment variable management
 - `colorama` - Cross-platform colored terminal output
 - `halo` - Beautiful loading spinners
 - `rich` - Enhanced terminal formatting and UI
 
-Development: `ruff`, `pytest`, `pytest-cov`, `pre-commit`.
+Development: `ruff`, `pytest`, `pytest-cov`.
 
 ## Project Structure
 
 ```
 autocommit/
-├── src/                    # Core package
-│   ├── __init__.py
-│   ├── api/                # API client modules
+├── src/
+│   ├── api/                # AI provider implementations
 │   ├── config/             # Configuration system
 │   ├── context/            # Context detection module
 │   ├── models/             # Data models (dataclasses)
 │   ├── parsers/            # Message and diff parsing
-│   ├── git_utils.py        # Git operations & smart diff
+│   ├── git_utils.py        # Git operations
 │   └── ui.py               # Rich terminal interface
-├── tests/                  # Test suite
-│   ├── __init__.py
-│   ├── test_api_client.py
-│   ├── test_diff_parser.py
-│   └── test_tcp_check.py
-├── main.py                # CLI entrypoint with self-tests
-├── config.toml            # Configuration file (optional)
-├── requirements.txt       # pip dependencies
-├── setup.py               # Package configuration
-└── LICENSE                # GPL-3.0
+├── tests/
+│   ├── test_providers.py   # Tests for AI providers
+│   ├── test_factory.py     # Tests for ProviderFactory
+│   ├── test_manager.py     # Tests for AIProviderManager
+│   └── ...                 # Other existing tests
+├── main.py                 # CLI entrypoint
+├── config.toml             # Main configuration file
+├── requirements.txt        # pip dependencies
+└── LICENSE
 ```
 
 ## Testing

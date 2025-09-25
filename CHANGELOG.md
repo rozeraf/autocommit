@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.0] - 2025-09-25
+
+### Added
+- **Multi-Provider AI System**: Implemented a new provider-based architecture to support multiple AI backends.
+- **New Providers**: Added full support for `OpenAI` and `Anthropic` alongside the existing `OpenRouter` provider.
+- **Provider Configuration**: Added `[ai.providers]` section to `config.toml` to manage settings for each provider independently.
+- **Provider-Specific Prompts**: Prompts can now be customized for each provider under `[ai.prompts]` in `config.toml`.
+- **AI Provider Manager**: Created `AIProviderManager` for smart, context-based provider switching (e.g., using a powerful model for large changes).
+- **New CLI Commands**:
+  - `gac --provider <name>`: Force the use of a specific provider.
+  - `gac --list-providers`: Show all available AI providers.
+  - `gac --test-providers`: Test connectivity for all configured providers.
+  - `gac --provider-info <name>`: Display detailed information about a specific provider.
+- **Comprehensive Provider Tests**: Added a new test suite (`test_providers.py`, `test_factory.py`, `test_manager.py`) to cover the entire provider system with mocked API calls.
+
+### Changed
+- **BREAKING**: Refactored the `BaseAIProvider` interface, standardizing the `generate_commit_message` method signature to `(user_content: str, system_prompt: str)`.
+- The application now dynamically selects a system prompt based on the active provider, with a fallback to a default prompt.
+
+### Fixed
+- Fixed a `TypeError` in the AI Provider Manager by correcting the arguments passed to `get_provider_for_context`.
+- Resolved an `AttributeError` when displaying provider info by correctly converting a dataclass to a dictionary using `asdict`.
+- Corrected test failures by updating mock patch targets to where `HTTPClient` is used, not where it's defined.
+- Fixed various syntax errors and linting issues in the new test files.
+
 ## [2.2.1] - 2025-09-21
 
 ### Fixed

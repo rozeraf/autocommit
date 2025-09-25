@@ -2,6 +2,6 @@ from setuptools import find_packages, setup
 
 setup(
     name="autocommit",
-    version="0.1.0",
+    version="3.0.0",
     packages=find_packages(),
 )
