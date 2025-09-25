@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 from typing import List
-from src.models.commit import CommitMessage
 from src.models.api import ModelInfo
 
 
@@ -8,7 +7,7 @@ class BaseAIProvider(ABC):
     """Abstract base class for AI providers."""
 
     @abstractmethod
-    def generate_commit_message(self, diff: str, context: str) -> CommitMessage:
+    def generate_commit_message(self, user_content: str, system_prompt: str) -> str:
         """Generates a commit message for the given diff and context."""
         raise NotImplementedError
 

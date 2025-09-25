@@ -6,7 +6,6 @@ from typing import List, Optional
 
 from src.api.base import BaseAIProvider
 from src.models.api import ModelInfo
-from src.models.commit import CommitMessage
 
 
 class LocalProvider(BaseAIProvider):
@@ -16,8 +15,8 @@ class LocalProvider(BaseAIProvider):
         raise NotImplementedError("Local provider is not yet implemented.")
 
     def generate_commit_message(
-        self, diff: str, context: str
-    ) -> Optional[CommitMessage]:
+        self, user_content: str, system_prompt: str
+    ) -> Optional[str]:
         raise NotImplementedError
 
     def test_connectivity(self) -> bool:

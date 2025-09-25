@@ -90,8 +90,12 @@ class CommitGenerator:
 
         logger.debug(f"Smart diff length: {len(smart_diff)} characters")
 
-        # This logic will be expanded when provider-specific prompts are added
-        system_prompt = DEFAULT_SYSTEM_PROMPT
+        provider_name = self.provider.__class__.__name__.lower().replace("provider", "")
+        system_prompt = (
+            self.config.ai.prompts.get(provider_name)
+            or self.config.ai.prompts.get("default")
+            or DEFAULT_SYSTEM_PROMPT
+        )
 
         user_content = f"""Create a commit message for these changes:
 {smart_diff}"""

@@ -47,13 +47,15 @@ class OpenRouterProvider(BaseAIProvider):
             logger.error(f"Error requesting model information: {e}")
             return None
 
-    def generate_commit_message(self, diff: str, context: str) -> Optional[str]:
+    def generate_commit_message(
+        self, user_content: str, system_prompt: str
+    ) -> Optional[str]:
         """Generate a commit message using OpenRouter API."""
         payload = {
             "model": self.model,
             "messages": [
-                {"role": "system", "content": context},
-                {"role": "user", "content": diff},
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_content},
             ],
             "max_tokens": self.config.max_tokens,
             "temperature": self.config.temperature,
