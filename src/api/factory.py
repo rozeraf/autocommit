@@ -3,9 +3,9 @@ from src.api.base import BaseAIProvider
 from src.config.models import ProviderConfig
 from src.api.openrouter import OpenRouterProvider
 from src.api.openai import OpenAIProvider
+from src.api.anthropic import AnthropicProvider
 
 # Placeholder for other providers
-# from src.api.anthropic import AnthropicProvider
 # from src.api.local import LocalProvider
 
 
@@ -15,7 +15,7 @@ class ProviderFactory:
     _providers: Dict[str, Type[BaseAIProvider]] = {
         "openrouter": OpenRouterProvider,
         "openai": OpenAIProvider,
-        # "anthropic": AnthropicProvider,
+        "anthropic": AnthropicProvider,
         # "local": LocalProvider,
     }
 
