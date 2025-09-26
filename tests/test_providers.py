@@ -3,9 +3,11 @@ import unittest
 from unittest.mock import patch, MagicMock
 
 from src.config.models import ProviderConfig
-from src.api.openai import OpenAIProvider
-from src.api.openrouter import OpenRouterProvider
-from src.api.anthropic import AnthropicProvider
+from src.api.providers import (
+    AnthropicProvider,
+    OpenAIProvider,
+    OpenRouterProvider,
+)
 
 
 class TestProviders(unittest.TestCase):
@@ -29,7 +31,7 @@ class TestProviders(unittest.TestCase):
         self.system_prompt = "Test system prompt"
 
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test_key"})
-    @patch("src.api.openai.HTTPClient")
+    @patch("src.api.providers.openai.HTTPClient")
     def test_openai_provider_success(self, MockHTTPClient):
         mock_response = MagicMock()
         mock_response.json.return_value = {
@@ -49,7 +51,7 @@ class TestProviders(unittest.TestCase):
         self.assertEqual(kwargs["json"]["messages"][1]["content"], self.user_content)
 
     @patch.dict(os.environ, {"OPENROUTER_API_KEY": "test_key"})
-    @patch("src.api.openrouter.HTTPClient")
+    @patch("src.api.providers.openrouter.HTTPClient")
     def test_openrouter_provider_success(self, MockHTTPClient):
         mock_response = MagicMock()
         mock_response.json.return_value = {
@@ -68,7 +70,7 @@ class TestProviders(unittest.TestCase):
         self.assertIn("HTTP-Referer", kwargs["headers"])
 
     @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test_key"})
-    @patch("src.api.anthropic.HTTPClient")
+    @patch("src.api.providers.anthropic.HTTPClient")
     def test_anthropic_provider_success(self, MockHTTPClient):
         mock_response = MagicMock()
         mock_response.json.return_value = {"content": [{"text": "Test commit message"}]}

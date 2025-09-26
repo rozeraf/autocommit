@@ -4,8 +4,8 @@ Local AI Provider (Placeholder)
 
 from typing import List, Optional
 
-from src.api.base import BaseAIProvider
-from src.models.api import ModelInfo
+from .base import BaseAIProvider
+from ...models.api import ModelInfo
 
 
 class LocalProvider(BaseAIProvider):

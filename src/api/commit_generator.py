@@ -5,7 +5,7 @@ Commit message generator using a specified AI provider.
 import logging
 from typing import Optional
 
-from src.api.base import BaseAIProvider
+from src.api.providers import BaseAIProvider
 from src.models.commit import CommitMessage
 from src.parsers.diff_parser import DiffParser
 from src.parsers.commit_parser import CommitParser

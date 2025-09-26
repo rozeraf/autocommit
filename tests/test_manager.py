@@ -3,8 +3,7 @@ from unittest.mock import patch
 
 from src.config.loader import get_config
 from src.api.manager import AIProviderManager
-from src.api.openai import OpenAIProvider
-from src.api.openrouter import OpenRouterProvider
+from src.api.providers import OpenAIProvider, OpenRouterProvider
 
 
 class TestAIProviderManager(unittest.TestCase):

@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import List
-from src.models.api import ModelInfo
+from ...models.api import ModelInfo
 
 
 class BaseAIProvider(ABC):

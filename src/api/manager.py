@@ -7,7 +7,7 @@ import fnmatch
 from typing import Dict
 
 from src.config.models import Config
-from src.api.base import BaseAIProvider
+from src.api.providers import BaseAIProvider
 from src.api.factory import ProviderFactory
 from src.parsers.diff_parser import DiffParser
 

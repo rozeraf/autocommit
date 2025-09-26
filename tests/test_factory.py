@@ -3,9 +3,11 @@ from unittest.mock import patch
 
 from src.api.factory import ProviderFactory
 from src.config.models import AIConfig, ProviderConfig
-from src.api.openai import OpenAIProvider
-from src.api.openrouter import OpenRouterProvider
-from src.api.anthropic import AnthropicProvider
+from src.api.providers import (
+    AnthropicProvider,
+    OpenAIProvider,
+    OpenRouterProvider,
+)
 
 
 class TestProviderFactory(unittest.TestCase):

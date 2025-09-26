@@ -1,9 +1,12 @@
-from typing import List, Dict, Type
-from src.api.base import BaseAIProvider
+from typing import Dict, List, Type
+
+from src.api.providers import (
+    AnthropicProvider,
+    BaseAIProvider,
+    OpenAIProvider,
+    OpenRouterProvider,
+)
 from src.config.models import ProviderConfig
-from src.api.openrouter import OpenRouterProvider
-from src.api.openai import OpenAIProvider
-from src.api.anthropic import AnthropicProvider
 
 # Placeholder for other providers
 # from src.api.local import LocalProvider
