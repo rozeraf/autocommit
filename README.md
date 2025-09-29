@@ -20,7 +20,7 @@ Automatic git commit message generation using AI with a beautiful terminal inter
 
 ### 1. Setup Environment
 
-Ensure Python 3.11+ and Git are installed. Use pyenv for version management:
+Ensure Python 3.11+ and Git are installed. You can use pyenv for version management:
 
 ```bash
 # Install pyenv (if needed)
