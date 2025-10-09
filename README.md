@@ -54,9 +54,12 @@ ANTHROPIC_API_KEY=sk-ant-your-key-here
 ```
 
 Get your keys from:
+
 - **OpenRouter**: https://openrouter.ai
 - **OpenAI**: https://platform.openai.com/api-keys
 - **Anthropic**: https://console.anthropic.com/settings/keys
+
+> **⚠️ Important for OpenRouter Free Models**: If you're using free models (e.g., `deepseek/deepseek-chat-v3.1:free`), you must enable "Free model publication" in your OpenRouter privacy settings at https://openrouter.ai/settings/privacy. Without this setting, you'll get a "No endpoints found" error.
 
 ### 4. Configuration (Optional)
 
@@ -74,7 +77,7 @@ model = "deepseek/deepseek-chat-v3.1:free"
 temperature = 0.3
 env_key = "OPENROUTER_API_KEY"
 
-[ai.providers.openai] 
+[ai.providers.openai]
 model = "gpt-4o-mini"
 temperature = 0.3
 env_key = "OPENAI_API_KEY"
@@ -127,7 +130,7 @@ python3 main.py --dry-run
 python3 main.py --test
 ```
 
-## What's New
+## What's new
 
 This project has undergone significant improvements with the latest v2.3 release:
 
@@ -140,6 +143,7 @@ For detailed information about all changes, see [CHANGELOG.md](CHANGELOG.md).
 ## Dependencies
 
 Managed via pip in `requirements.txt`. Key packages:
+
 - `requests` - API communication
 - `python-dotenv` - Environment variable management
 - `colorama` - Cross-platform colored terminal output
@@ -190,6 +194,7 @@ python3 main.py --test-api
 ```
 
 Test coverage includes:
+
 - AI response parsing edge cases
 - Markdown and code block cleanup
 - Complex AI response handling
@@ -216,6 +221,7 @@ GPL-3.0 - See [LICENSE](LICENSE) file for details.
 ## Screenshots
 
 The application features a beautiful terminal interface with:
+
 - Styled commit preview boxes
 - Interactive confirmation prompts
 - Loading spinners with progress feedback
