@@ -5,6 +5,7 @@ from unittest.mock import patch, MagicMock
 from src.config.models import ProviderConfig
 from src.api.providers import (
     AnthropicProvider,
+    GoogleProvider,
     OpenAIProvider,
     OpenRouterProvider,
 )
@@ -26,6 +27,11 @@ class TestProviders(unittest.TestCase):
             model="claude-3-5-sonnet-20240620",
             api_url="https://api.anthropic.com/v1",
             env_key="ANTHROPIC_API_KEY",
+        )
+        self.google_config = ProviderConfig(
+            model="gemini-1.5-flash",
+            api_url="",
+            env_key="GOOGLE_API_KEY",
         )
         self.user_content = "Test user content"
         self.system_prompt = "Test system prompt"
@@ -88,6 +94,20 @@ class TestProviders(unittest.TestCase):
         self.assertEqual(kwargs["json"]["messages"][0]["content"], self.user_content)
         self.assertEqual(kwargs["headers"]["anthropic-version"], "2023-06-01")
 
+    @patch.dict(os.environ, {"GOOGLE_API_KEY": "test_key"})
+    @patch("src.api.providers.google.genai.Client")
+    def test_google_provider_success(self, MockGenAIClient):
+        mock_client = MockGenAIClient.return_value
+        mock_response = MagicMock()
+        mock_response.text = "Test commit message"
+        mock_client.models.generate_content.return_value = mock_response
+
+        provider = GoogleProvider(self.google_config)
+        result = provider.generate_commit_message(self.user_content, self.system_prompt)
+
+        self.assertEqual(result, "Test commit message")
+        mock_client.models.generate_content.assert_called_once()
+
     def test_provider_key_missing(self):
         with patch.dict(os.environ, clear=True):
             with self.assertRaises(ValueError):
@@ -96,6 +116,8 @@ class TestProviders(unittest.TestCase):
                 OpenRouterProvider(self.openrouter_config)
             with self.assertRaises(ValueError):
                 AnthropicProvider(self.anthropic_config)
+            with self.assertRaises(ValueError):
+                GoogleProvider(self.google_config)
 
 
 if __name__ == "__main__":

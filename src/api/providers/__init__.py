@@ -6,6 +6,7 @@ from .base import BaseAIProvider
 from .anthropic import AnthropicProvider
 from .openai import OpenAIProvider
 from .openrouter import OpenRouterProvider
+from .google import GoogleProvider
 from .local import LocalProvider
 
 __all__ = [
@@ -13,5 +14,6 @@ __all__ = [
     "AnthropicProvider",
     "OpenAIProvider",
     "OpenRouterProvider",
+    "GoogleProvider",
     "LocalProvider",
 ]

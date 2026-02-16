@@ -3,6 +3,7 @@ from typing import Dict, List, Type
 from src.api.providers import (
     AnthropicProvider,
     BaseAIProvider,
+    GoogleProvider,
     OpenAIProvider,
     OpenRouterProvider,
 )
@@ -19,6 +20,7 @@ class ProviderFactory:
         "openrouter": OpenRouterProvider,
         "openai": OpenAIProvider,
         "anthropic": AnthropicProvider,
+        "google": GoogleProvider,
         # "local": LocalProvider,
     }
 
