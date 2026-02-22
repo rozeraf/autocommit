@@ -1,7 +1,7 @@
 [project]
 name = "autocommit"
-version = "0.1.0"
-description = "Add your description here"
+version = "3.1.0"
+description = "Automatic git commit message generation using AI with a beautiful terminal interface and comprehensive testing."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
