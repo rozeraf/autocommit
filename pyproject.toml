@@ -1,0 +1,18 @@
+[project]
+name = "autocommit"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "colorama>=0.4.6",
+    "google-genai>=1.64.0",
+    "halo>=0.0.31",
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "python-dotenv>=1.0.0",
+    "requests>=2.31.0",
+    "rich>=14.3.3",
+    "ruff>=0.1.0",
+    "toml>=0.10.2",
+]

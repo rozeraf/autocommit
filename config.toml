@@ -12,7 +12,7 @@ base_provider = "openrouter"
 context_switching = true
 
 [ai.providers.openrouter]
-model = "deepseek/deepseek-chat-v3.1:free"
+model = "arcee-ai/trinity-large-preview:free"
 api_url = "https://openrouter.ai/api/v1"
 temperature = 0.3
 max_tokens = 1000
