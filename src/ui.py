@@ -362,7 +362,7 @@ def open_in_editor(text: str) -> str:
         suffix=".txt", delete=False, mode="w", encoding="utf-8"
     ) as tf:
         tf.write(text)
-        temp_path = tf.file.name
+        temp_path = tf.name
 
     try:
         # Run editor
