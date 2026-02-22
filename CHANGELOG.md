@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.0] - 2026-02-22
+
+### Added
+- **Interactive Editing**: Added a new `[M]odify` option to the commit confirmation prompt. Users can now open the generated message in their default terminal editor (`$VISUAL`, `$EDITOR`, or fallback to `vim`/`nano`) to make manual adjustments before confirming.
+- **Smart Editor Support**: Implemented automatic detection of editors and specific flag handling (e.g., adding `--wait` for `code` and `subl`).
+- **Re-parsing Logic**: Added `CommitParser.parse_edited` to intelligently parse the modified text back into subject and description, ensuring validation rules are still applied.
+
+### Changed
+- Updated the main loop to support the modify-and-retry workflow without losing the generated context.
+- Refactored UI confirmation to return structured actions (`"yes"`, `"no"`, `"regenerate"`, `"modify"`) instead of simple booleans.
+
 ## [3.0.0] - 2025-09-25
 
 ### Added

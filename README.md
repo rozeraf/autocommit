@@ -12,7 +12,7 @@ Automatic git commit message generation using AI with a beautiful terminal inter
 - **Multi-Provider AI**: Supports OpenRouter, OpenAI, and Anthropic backends.
 - **Beautiful UI**: Rich terminal interface with colored output and styled boxes.
 - **Smart Parsing**: Robust commit message parsing with markdown cleanup.
-- **Interactive**: Preview, confirm, or regenerate commit messages.
+- **Interactive**: Preview, confirm, regenerate, or manually modify commit messages.
 - **Self-Testing**: Built-in health checks and a comprehensive test suite.
 - **Conventional Commits**: Enforces best practices for commit messages.
 
