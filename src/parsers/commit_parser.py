@@ -287,6 +287,35 @@ class CommitParser:
         # feat and fix often benefit from descriptions
         return commit_type in {"feat", "fix", "refactor", "perf"}
 
+    def parse_edited(self, edited_text: str) -> ParsedCommit:
+        """
+        Parse text edited by the user in an external editor.
+        """
+        # Clean up whitespace
+        text = edited_text.strip()
+        if not text:
+            return ParsedCommit(
+                subject="",
+                description=None,
+                is_valid=False,
+                warnings=["Empty commit message"],
+            )
+
+        # Split subject and description
+        parts = text.split("\n\n", 1)
+        subject = parts[0].replace("\n", " ").strip()
+        description = parts[1].strip() if len(parts) > 1 else None
+
+        # Reuse existing validation
+        is_valid, warnings = self._validate_commit(subject, description)
+
+        return ParsedCommit(
+            subject=subject,
+            description=description,
+            is_valid=is_valid,
+            warnings=warnings,
+        )
+
     def format_for_git(self, parsed_commit: ParsedCommit) -> str:
         """Format parsed commit for git command"""
         if parsed_commit.description:

@@ -111,10 +111,8 @@ class CommitGenerator:
             logger.error("AI provider returned an empty response.")
             return None
 
-        logger.debug(
-            f"""AI Response:
-{ai_response}"""
-        )
+        logger.debug(f"""AI Response:
+{ai_response}""")
 
         parser = CommitParser()
         parsed_commit = parser.parse_ai_response(ai_response)

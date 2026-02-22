@@ -17,6 +17,11 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 """
 
 import logging
+import os
+import shutil
+import subprocess
+import tempfile
+from typing import Literal
 from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
@@ -27,13 +32,14 @@ console = Console()
 
 def show_confirmation(
     commit_msg: str, description: str | None, skip_confirm: bool = False
-) -> bool | None:
+) -> Literal["yes", "no", "regenerate", "modify"]:
     """Shows a beautifully formatted commit preview using rich library
 
     Returns:
-        True: User confirmed
-        False: User declined
-        None: User wants to regenerate
+        "yes": User confirmed
+        "no": User declined
+        "regenerate": User wants to regenerate
+        "modify": User wants to modify manually
     """
 
     # Calculate stats
@@ -82,7 +88,7 @@ def show_confirmation(
     _show_command_preview(commit_msg, description)
 
     if skip_confirm:
-        return True
+        return "yes"
 
     return _get_user_confirmation()
 
@@ -166,7 +172,7 @@ def _show_command_preview(commit_msg: str, description: str | None):
     console.print(f"  {commit_preview}")
 
 
-def _get_user_confirmation() -> bool | None:
+def _get_user_confirmation() -> Literal["yes", "no", "regenerate", "modify"]:
     """Get user confirmation for commit"""
     console.print()
 
@@ -177,14 +183,21 @@ def _get_user_confirmation() -> bool | None:
     prompt_text.append("[N]", style="red bold")
     prompt_text.append("o / ", style="white")
     prompt_text.append("[R]", style="yellow bold")
-    prompt_text.append("egenerate: ", style="white")
+    prompt_text.append("egenerate / ", style="white")
+    prompt_text.append("[M]", style="magenta bold")
+    prompt_text.append("odify: ", style="white")
 
     console.print(prompt_text, end="")
 
     confirm = input().strip().lower()
     if confirm in ("r", "regenerate"):
-        return None
-    return confirm in ("", "y", "yes")
+        return "regenerate"
+    if confirm in ("m", "modify"):
+        return "modify"
+    if confirm in ("n", "no"):
+        return "no"
+    # Default (empty) or "y"/"yes"
+    return "yes"
 
 
 def show_error(message: str):
@@ -312,3 +325,60 @@ def show_test_results(results: list[dict]):
         console.print("\n[red bold]Some self-tests failed.[/red bold]")
 
     return all_passed
+
+
+def _resolve_editor() -> str:
+    """Resolve the editor to use for modifying commit messages."""
+    # Check environment variables
+    for env_var in ("VISUAL", "EDITOR"):
+        if editor := os.getenv(env_var):
+            return editor
+
+    # Check fallback editors
+    for editor in ("nvim", "vim", "vi", "emacs", "nano"):
+        if shutil.which(editor):
+            return editor
+
+    raise RuntimeError(
+        "No suitable editor found. Please set VISUAL or EDITOR environment variable."
+    )
+
+
+def open_in_editor(text: str) -> str:
+    """Open the text in the user's editor and return the modified text."""
+    editor_cmd = _resolve_editor()
+
+    # Split command into parts (e.g. "code -w" -> ["code", "-w"])
+    parts = editor_cmd.split()
+    executable = os.path.basename(parts[0])
+
+    # Add --wait flag for VS Code and Sublime Text if not present
+    if executable in ("code", "subl", "sublime_text"):
+        if "--wait" not in parts and "-w" not in parts:
+            parts.append("--wait")
+
+    # Create temporary file
+    with tempfile.NamedTemporaryFile(
+        suffix=".txt", delete=False, mode="w", encoding="utf-8"
+    ) as tf:
+        tf.write(text)
+        temp_path = tf.file.name
+
+    try:
+        # Run editor
+        subprocess.run(parts + [temp_path], check=True)
+
+        # Read back content
+        with open(temp_path, "r", encoding="utf-8") as f:
+            return f.read()
+
+    except subprocess.CalledProcessError as e:
+        show_error(f"Editor exited with error: {e}")
+        return text
+    except Exception as e:
+        show_error(f"Failed to open editor: {e}")
+        return text
+    finally:
+        # Cleanup
+        if os.path.exists(temp_path):
+            os.unlink(temp_path)

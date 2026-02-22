@@ -20,6 +20,7 @@ from src import git_utils, ui
 from src.config.loader import get_config
 from src.context.detector import ContextDetector
 from src.parsers.diff_parser import DiffParser
+from src.parsers.commit_parser import CommitParser
 
 load_dotenv()
 
@@ -255,24 +256,24 @@ def main():
     )
 
     generator = CommitGenerator(provider)
+    commit_parser = CommitParser()
+
+    # Generate initial commit message
+    spinner = Halo(
+        text=f"{Fore.CYAN}Generating commit message...{Style.RESET_ALL}",
+        spinner="dots",
+    )
+    spinner.start()
+
+    result = generator.generate(diff, prompt_context)
+
+    if result:
+        spinner.succeed(f"{Fore.GREEN}Commit message generated.{Style.RESET_ALL}")
+    else:
+        spinner.fail(f"{Fore.RED}Failed to generate commit message.{Style.RESET_ALL}")
+        sys.exit(1)
 
     while True:
-        spinner = Halo(
-            text=f"{Fore.CYAN}Generating commit message...{Style.RESET_ALL}",
-            spinner="dots",
-        )
-        spinner.start()
-
-        result = generator.generate(diff, prompt_context)
-
-        if result:
-            spinner.succeed(f"{Fore.GREEN}Commit message generated.{Style.RESET_ALL}")
-        else:
-            spinner.fail(
-                f"{Fore.RED}Failed to generate commit message.{Style.RESET_ALL}"
-            )
-            sys.exit(1)
-
         if args.dry_run:
             ui.show_info("Dry Run: Commit Message")
             ui.show_success(f"Message: {result.subject}")
@@ -284,14 +285,43 @@ def main():
             result.subject, result.description, args.yes
         )
 
-        if confirmation is True:
+        if confirmation == "yes":
             if git_utils.commit_changes(result.subject, result.description):
                 ui.show_success("Done!")
             else:
                 sys.exit(1)
             break
-        elif confirmation is None:
+        elif confirmation == "regenerate":
             ui.show_info("Regenerating commit message...")
+            spinner = Halo(
+                text=f"{Fore.CYAN}Generating commit message...{Style.RESET_ALL}",
+                spinner="dots",
+            )
+            spinner.start()
+            result = generator.generate(diff, prompt_context)
+            if result:
+                spinner.succeed(
+                    f"{Fore.GREEN}Commit message generated.{Style.RESET_ALL}"
+                )
+            else:
+                spinner.fail(
+                    f"{Fore.RED}Failed to generate commit message.{Style.RESET_ALL}"
+                )
+                sys.exit(1)
+            continue
+        elif confirmation == "modify":
+            full_text = commit_parser.format_for_git(result)
+            edited_text = ui.open_in_editor(full_text)
+
+            cleaned_text = edited_text.strip()
+            if not cleaned_text:
+                ui.show_warning("Empty message, keeping previous message.")
+                continue
+
+            if cleaned_text == full_text.strip():
+                continue
+
+            result = commit_parser.parse_edited(edited_text)
             continue
         else:
             ui.show_info("Commit cancelled.")
